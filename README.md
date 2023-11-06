@@ -8,8 +8,8 @@ query language for relational db:
 - Ordering: "order [table] by [col] in [descending / ascending] order"
 - Aggregation: calculate the [sum / average] of [col] for [table]
 - Grouping: "group [table] by [col]"
-  only support grouping with aggregation?
-  query "calculate the [sum / average] of [col] for [table]" "group by [col]
+  - only support grouping with aggregation?
+  - e.g. query "calculate the [sum / average] of [col] for [table]" "group by [col]
 - Inner Join: "combine rows from [table1] and [table2] where their [col] values match"  
 
 
