@@ -14,10 +14,10 @@ query language for relational db:
 
 
 example queries:
-query "get type, title from netflix23"
-query "find netflix23 that have a release_year of at most 2020"
-query "find netflix23 that have a release_year of at least 2020"
-query "find netflix23 that release_year is 2020"
-query "order netflix23 by release_year in descending order"
-query "order netflix23 by release_year in ascending order"
-...  
+- query "get type, title from netflix23"
+- query "find netflix23 that have a release_year of at most 2020"
+- query "find netflix23 that have a release_year of at least 2020"
+- query "find netflix23 that release_year is 2020"
+- query "order netflix23 by release_year in descending order"
+- query "order netflix23 by release_year in ascending order"
+- ...  
