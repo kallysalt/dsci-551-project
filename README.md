@@ -4,7 +4,6 @@ key requirements
 - Design a query language like human conversations with some keywords and map them to process the query using programming languages
 - You cannot use any of the existing databases like firebase, sql, etc to store data
 
-
 memory assumption: 1MB 
 
 query language for relational db:
