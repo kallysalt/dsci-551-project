@@ -61,3 +61,15 @@ class QueryParser:
             return table, column, order
         else:
             raise ValueError("Invalid ordering syntax")
+        
+    @staticmethod
+    def parse_grouping(query):
+        pass
+    
+    @staticmethod
+    def parse_aggregation(query):
+        pass
+    
+    @staticmethod
+    def parse_inner_join(query):
+        pass

@@ -10,7 +10,14 @@ query language for relational db:
 - Grouping: "group [table] by [col]"
   - only support grouping with aggregation?
   - e.g. query "calculate the [sum / average] of [col] for [table]" "group by [col]
-- Inner Join: "combine rows from [table1] and [table2] where their [col] values match"  
+- Inner Join: "combine rows from [table1] and [table2] where their [col] values match"   
+
+
+data modification operations for relatioal db:
+- INSERT <row value> INTO <table name>
+- DELETE FROM <table name> WHERE <column name> = <value>
+- UPDATE <table name> SET <column name> = <new value> WHERE <column
+name> = <old value>   
 
 
 example queries:
