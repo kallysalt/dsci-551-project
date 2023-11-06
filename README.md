@@ -6,7 +6,7 @@
 
    
 ### memory assumption ###   
-1MB
+1KB (for now)
 
 
 ### query language for relational db ###

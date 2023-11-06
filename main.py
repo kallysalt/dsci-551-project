@@ -3,7 +3,6 @@ from relational_db import RelationalDB
 from json_db import JsonDB
 
 class MyCLI(cmd.Cmd):
-    
     prompt = '(mycli) '
     intro = "Welcome to MyDB! Type ? to list commands."
     

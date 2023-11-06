@@ -1,9 +1,7 @@
 import re
 import utils
 
-
-class QueryParser:
-    
+class MyQLParser:
     def __init__(self):
         raise NotImplementedError("StaticClass cannot be instantiated")
 
@@ -11,54 +9,49 @@ class QueryParser:
     def parse_projection(query):
         match = re.match(r"get ([\w\, ]+) from (\w+)", query)
         if match:
-            cols, table = match.groups()
-            cols = cols.split(',') 
-            for i in range(len(cols)):
-                cols[i] = cols[i].strip()
-            return cols, table
+            col_names, table_name = match.groups()
+            col_names = col_names.split(',') 
+            for i in range(len(col_names)):
+                col_names[i] = col_names[i].strip()
+            return col_names, table_name
         else:
             raise ValueError("Invalid projection syntax")
 
-    
     @staticmethod
     def parse_filtering(query):
         if "of at least" in query:
             match = re.match(r"find (\w+) that have a (\w+) of at least (\d+)", query)
             if match:
-                table, col, value = match.groups()
+                table_name, col_name, value = match.groups()
                 value = utils.to_number(value)
-                return col, table, value, ">="
+                return col_name, table_name, value, ">="
             else:
                 raise ValueError("Invalid filtering syntax")
-        
         elif "of at most" in query:
             match = re.match(r"find (\w+) that have a (\w+) of at most (\d+)", query)
             if match:
-                table, col, value = match.groups()
+                table_name, col_name, value = match.groups()
                 value = utils.to_number(value)
-                return col, table, value, "<="
+                return col_name, table_name, value, "<="
             else:
                 raise ValueError("Invalid filtering syntax")
-        
         elif " is " in query:
             match = re.match(r"find (\w+) that (\w+) is (.+)", query)
             if match:
-                table, col, value = match.groups()
+                table_name, col_name, value = match.groups()
                 value = utils.to_number(value)
-                return col, table, value, "="
+                return col_name, table_name, value, "="
             else:
                 raise ValueError("Invalid filtering syntax")
-        
         else:
             raise ValueError("Invalid filtering syntax")
-        
         
     @staticmethod
     def parse_ordering(query):
         match = re.match(r"order (\w+) by (\w+) in (descending|ascending) order", query)
         if match:
-            table, column, order = match.groups()
-            return table, column, order
+            table_name, col_name, order = match.groups()
+            return table_name, col_name, order
         else:
             raise ValueError("Invalid ordering syntax")
         
@@ -72,4 +65,17 @@ class QueryParser:
     
     @staticmethod
     def parse_inner_join(query):
+        pass
+    
+    @staticmethod
+    def parse_insert(query):
+        
+        pass
+    
+    @staticmethod
+    def parse_update(query):
+        pass
+    
+    @staticmethod
+    def parse_delete(query):
         pass
