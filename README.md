@@ -2,6 +2,7 @@ if your datasize is 5MB and your memory assumption is 1MB， your dataset should
 - our memory assumption: ?
 
 
+
 query language for relational db:
 - Projection: "get [col1, col2, col3, ...] from [table]"
 - Filtering: "find [table] that have a [col] of at [least / most] [numeric value]", "find [table] that [col] is [value]"
@@ -11,6 +12,7 @@ query language for relational db:
   only support grouping with aggregation?
   query "calculate the [sum / average] of [col] for [table]" "group by [col]
 - Inner Join: "combine rows from [table1] and [table2] where their [col] values match"
+
 
 
 example queries:
