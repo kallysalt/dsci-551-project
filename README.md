@@ -1,6 +1,11 @@
-if your datasize is 5MB and your memory assumption is 1MB， your dataset should be divided into 5 different chunks and then perform operations
-- our memory assumption: ?  
+key requirements
+- You should assume you have a limited memory to perform operations. If your datasize is 5MB and your memory assumption is 1MB, then your dataset should be divided into 5 different chunks and then perform operations
+- Best approach for this project is to store data as chunks rather than reading as chunks using builtin methods like read_csv(n_chunks = ...). So that you have control over data processing as chunks. You can also store intermediate results on disk and construct final results from intermediate results again by reading them from the disk
+- Design a query language like human conversations with some keywords and map them to process the query using programming languages
+- You cannot use any of the existing databases like firebase, sql, etc to store data
 
+
+memory assumption: 1MB 
 
 query language for relational db:
 - Projection: "get [col1, col2, col3, ...] from [table]"
