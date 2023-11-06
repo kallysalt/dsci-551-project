@@ -1,6 +1,5 @@
 if your datasize is 5MB and your memory assumption is 1MB， your dataset should be divided into 5 different chunks and then perform operations
-- our memory assumption: ?
-
+- our memory assumption: ?  
 
 
 query language for relational db:
@@ -11,8 +10,7 @@ query language for relational db:
 - Grouping: "group [table] by [col]"
   only support grouping with aggregation?
   query "calculate the [sum / average] of [col] for [table]" "group by [col]
-- Inner Join: "combine rows from [table1] and [table2] where their [col] values match"
-
+- Inner Join: "combine rows from [table1] and [table2] where their [col] values match"  
 
 
 example queries:
