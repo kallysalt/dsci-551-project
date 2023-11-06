@@ -4,7 +4,9 @@ key requirements
 - Design a query language like human conversations with some keywords and map them to process the query using programming languages
 - You cannot use any of the existing databases like firebase, sql, etc to store data
 
-memory assumption: 1MB 
+   
+memory assumption: 1MB   
+   
 
 query language for relational db:
 - Projection: "get [col1, col2, col3, ...] from [table]"
@@ -15,14 +17,14 @@ query language for relational db:
   - only support grouping with aggregation?
   - e.g. query "calculate the [sum / average] of [col] for [table]" "group by [col]
 - Inner Join: "combine rows from [table1] and [table2] where their [col] values match"   
-
+    
 
 data modification operations for relatioal db:
 - INSERT [row value] INTO [table name]
 - DELETE FROM [table name] WHERE [column name] = [value]
 - UPDATE [table name] SET [column name] = [new value] WHERE [column name] = [old value]   
-
-
+   
+   
 example queries:
 - query "get type, title from netflix23"
 - query "find netflix23 that have a release_year of at most 2020"
