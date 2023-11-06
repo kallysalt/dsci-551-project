@@ -5,10 +5,11 @@
 - You cannot use any of the existing databases like firebase, sql, etc to store data
 
    
-### memory assumption: 1MB ###   
-   
+### memory assumption ###   
+1MB
 
-### query language for relational db ###:
+
+### query language for relational db ###
 - Projection: "get [col1 name, col2 name, col3 name, ...] from [table name]"
 - Filtering: "find [table name] that have a [col] of at [least / most] [numeric value]", "find [table] that [col] is [value]"
 - Ordering: "order [table name] by [col] in [descending / ascending] order"
