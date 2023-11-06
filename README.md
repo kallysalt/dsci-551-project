@@ -14,10 +14,9 @@ query language for relational db:
 
 
 data modification operations for relatioal db:
-- INSERT <row value> INTO <table name>
-- DELETE FROM <table name> WHERE <column name> = <value>
-- UPDATE <table name> SET <column name> = <new value> WHERE <column
-name> = <old value>   
+- INSERT [row value] INTO [table name]
+- DELETE FROM [table name] WHERE [column name] = [value]
+- UPDATE [table name] SET [column name] = [new value] WHERE [column name] = [old value]   
 
 
 example queries:
