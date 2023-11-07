@@ -11,12 +11,12 @@
 
 ### query language for relational db ###
 - Projection: "get [col1_name, col2_name, col3_name, ...] from [table_name]"
-- Filtering: "find [table_name] that have a [col] of at [least / most] [numeric_value]", "find [table] that [col] is [value]"
-- Ordering: "order [table_name] by [col] in [descending / ascending] order"
-- Aggregation: calculate the [sum / average] of [col] for [table_name]
+- Filtering: "find [table_name] that have a [col_name] of at [least / most] [numeric_value]", "find [table_name] that [col_name] is [value]"
+- Ordering: "order [table_name] by [col_name] in [descending / ascending] order"
+- Aggregation: "calculate the [sum / average] of [col_name] for [table_name]"
 - Grouping: "group [table_name] by [col1_name] and calculate the [sum / average] of [col2_name]"
   - only support grouping with aggregation
-- Inner Join: "combine rows from [table1_name] and [table2_name] where their [col] values match"   
+- Inner Join: "combine rows from [table1_name] and [table2_name] where their [col_name] values match"   
     
 
 ### data modification operations for relatioal db (case insensitive) ###
@@ -33,3 +33,12 @@
 - query "order netflix23 by release_year in descending order"
 - query "order netflix23 by release_year in ascending order"
 - ...  
+- query "calculate the sum of col_name for table_name"
+- query "calculate the average of col_name for table_name"
+- query "group table_name by col1_name and calculate the sum of col2_name"
+- query "group table_name by col1_name and calculate the average of col2_name"
+- query "combine rows from table1_name and table2_name where their col_name values match"   
+- query "insert 1, 2, 3 into table_name"
+- query "delete from table_name where col_name = value"
+- query "update table_name set col_name = new_value where col_name = old_value"
+   

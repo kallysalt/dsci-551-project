@@ -22,39 +22,49 @@ class RelationalDB:
     # TODO: optimize performance
     def parse_query(self, query):
         query = query.lower()
+        
         if query.startswith("get"):
             col_names, table_name = MyQLParser.parse_projection(query)
             self.projection(col_names, table_name)
+            
         elif query.startswith("find"):
             col_name, table_name, value, criteria = MyQLParser.parse_filtering(query)
             self.filtering(col_name, table_name, value, criteria)
+            
         elif query.startswith("order"):
             table_name, col_name, order = MyQLParser.parse_ordering(query)
             self.ordering(table_name, col_name, order)
+            
         elif query.startswith("group"):
-            table_name, col_name = MyQLParser.parse_grouping(query)
-            print('table_name:', table_name, ', col_name:', col_name)
-            self.grouping(table_name, col_name)
+            table_name, col1_name, calculation, col2_name = MyQLParser.parse_grouping(query)
+            print('table_name:', table_name, ', col1_name:', col1_name, ', calculation:', calculation, ', col2_name:', col2_name)
+            self.grouping(table_name, col1_name, calculation, col2_name)
+            
         elif query.startswith("calculate"):
             table_name, col_name, order = MyQLParser.parse_aggregation(query)
             print('table_name:', table_name, ', col_name:', col_name, ', order:', order)
             self.aggregation(table_name, col_name, order)
+        
         elif query.startswith("combine"):
             table1_name, table2_name, col_name = MyQLParser.parse_inner_join(query)
             print('table1_name:', table1_name, ', table2_name:', table2_name, ', col_name:', col_name)
             self.inner_join(table1_name, table2_name, col_name)
+        
         elif query.startswith("insert"):
             row_value, table_name = MyQLParser.parse_insert(query)
             print('row_value:', row_value, ', table_name:', table_name)
             self.insert(row_value, table_name)
+        
         elif query.startswith("delete"):
             table_name, col_name, value = MyQLParser.parse_delete(query)
             print('table_name:', table_name, ', col_name:', col_name, ', value:', value)
             self.delete(table_name, col_name, value)
+        
         elif query.startswith("update"):
             table_name, col_name, new_val, old_val = MyQLParser.parse_update(query)
             print('table_name:', table_name, ', col_name:', col_name, ', new_val:', new_val, ', old_val:', old_val)
             self.update(table_name, col_name, new_val, old_val)
+        
         else:
             raise ValueError("Unrecognized command")
     
@@ -105,12 +115,12 @@ class RelationalDB:
         # not sure how to implement
         pass
 
-    def inner_join(table1_name, table2_name, col_name):
+    def inner_join(self, table1_name, table2_name, col_name):
         # fn = f'rdb/{table_name}.csv'
         # not sure how to implement
         pass 
 
-    def grouping(table_name, col1_name, calculation, col2_name):
+    def grouping(self, table_name, col1_name, calculation, col2_name):
         # fn = f'rdb/{table_name}.csv'
         # read csv file chunk by chunk
         # for each chunk：
@@ -118,7 +128,7 @@ class RelationalDB:
         # print result
         pass  
 
-    def aggregation(calculation, col_name, table_name):
+    def aggregation(self, calculation, col_name, table_name):
         # fn = f'rdb/{table_name}.csv'
         # check if sum or avg
         # if neither -> report err 
