@@ -10,20 +10,19 @@
 
 
 ### query language for relational db ###
-- Projection: "get [col1 name, col2 name, col3 name, ...] from [table name]"
-- Filtering: "find [table name] that have a [col] of at [least / most] [numeric value]", "find [table] that [col] is [value]"
-- Ordering: "order [table name] by [col] in [descending / ascending] order"
-- Aggregation: calculate the [sum / average] of [col] for [table name]
-- Grouping: "group [table name] by [col name]"
-  - only support grouping with aggregation?
-  - e.g. query "calculate the [sum / average] of [col name] for [table name]" "group by [col]"
-- Inner Join: "combine rows from [table1 name] and [table2 name] where their [col] values match"   
+- Projection: "get [col1_name, col2_name, col3_name, ...] from [table_name]"
+- Filtering: "find [table_name] that have a [col] of at [least / most] [numeric_value]", "find [table] that [col] is [value]"
+- Ordering: "order [table_name] by [col] in [descending / ascending] order"
+- Aggregation: calculate the [sum / average] of [col] for [table_name]
+- Grouping: "group [table_name] by [col1_name] and calculate the [sum / average] of [col2_name]"
+  - only support grouping with aggregation
+- Inner Join: "combine rows from [table1_name] and [table2_name] where their [col] values match"   
     
 
 ### data modification operations for relatioal db (case insensitive) ###
-- INSERT [row value] INTO [table name]
-- DELETE FROM [table name] WHERE [column name] = [value]
-- UPDATE [table name] SET [column name] = [new value] WHERE [column name] = [old value]   
+- insert [row_value] into [table_name]
+- delete from [table_name] where [col_name] = [value]
+- update [table_name] set [col_name] = [new_value] where [col_name] = [old_value]
    
 
 ### example queries ###

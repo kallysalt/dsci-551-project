@@ -1,5 +1,4 @@
 from tabulate import tabulate
-import re
 
 def to_number(value):
     try:

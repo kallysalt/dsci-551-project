@@ -7,6 +7,7 @@ class MyQLParser:
 
     @staticmethod
     def parse_projection(query):
+        '''get [col1_name, col2_name, col3_name, ...] from [table_name]'''
         match = re.match(r"get ([\w\, ]+) from (\w+)", query)
         if match:
             col_names, table_name = match.groups()
@@ -19,6 +20,8 @@ class MyQLParser:
 
     @staticmethod
     def parse_filtering(query):
+        '''find [table_name] that have a [col] of at [least / most] [numeric_value]'''
+        '''find [table] that [col] is [value]'''
         if "of at least" in query:
             match = re.match(r"find (\w+) that have a (\w+) of at least (\d+)", query)
             if match:
@@ -48,6 +51,7 @@ class MyQLParser:
         
     @staticmethod
     def parse_ordering(query):
+        '''order [table_name] by [col] in [descending / ascending] order'''
         match = re.match(r"order (\w+) by (\w+) in (descending|ascending) order", query)
         if match:
             table_name, col_name, order = match.groups()
@@ -57,25 +61,63 @@ class MyQLParser:
         
     @staticmethod
     def parse_grouping(query):
-        pass
+        '''group [table_name] by [col1_name] and calculate the [sum / average] of [col2_name]'''
+        match = re.match(r"group (\w+) by (\w+) and calculate the (sum|average) of (\w+)", query)
+        if match:
+            table_name, col1_name, calculation, col2_name = match.groups()
+            return table_name, col1_name, calculation, col2_name
+        else:
+            raise ValueError("Invalid grouping syntax") 
     
     @staticmethod
     def parse_aggregation(query):
-        pass
+        '''calculate the [sum / average] of [col_name] for [table_name]'''
+        match = re.match(r"calculate the (sum|average) of (\w+) for (\w+)", query)
+        if match:
+            calculation, col_name, table_name = match.groups()
+            return calculation, col_name, table_name
+        else:
+            raise ValueError("Invalid aggregation syntax")
     
     @staticmethod
     def parse_inner_join(query):
-        pass
+        '''combine rows from [table1_name] and [table2_name] where their [col] values match'''
+        match = re.match(r"combine rows from (\w+) and (\w+) where their (\w+) values match", query)
+        if match:
+            table1_name, table2_name, col_name = match.groups()
+            return table1_name, table2_name, col_name
+        else:
+            raise ValueError("Invalid inner join syntax")
     
     @staticmethod
     def parse_insert(query):
-        
-        pass
-    
-    @staticmethod
-    def parse_update(query):
-        pass
+        '''insert [row_value] into [table_name]'''
+        match = re.match(r"insert (.+) into (\w+)", query)
+        if match:
+            row_values, table_name = match.groups()
+            row_values = [value.strip() for value in row_values.split(',')]
+            return row_values, table_name
+        else:
+            raise ValueError("Invalid insert syntax")
     
     @staticmethod
     def parse_delete(query):
-        pass
+        '''delete from [table_name] where [col_name] = [value]'''
+        match = re.match(r"delete from (\w+) where (\w+) = (.+)", query)
+        if match:
+            table_name, col_name, value = match.groups()
+            return table_name, col_name, value
+        else:
+            raise ValueError("Invalid delete syntax")
+    
+    @staticmethod
+    def parse_update(query):
+        '''update [table_name] set [col_name] = [new_value] where [col_name] = [old_value]'''
+        match = re.match(r"update (\w+) set (\w+) = (.+) where (\w+) = (.+)", query)
+        if match:
+            table_name, col1_name, new_value, col2_name, old_value = match.groups()
+            if col1_name != col2_name:
+                raise ValueError("Column names do not match for update")
+            return table_name, col1_name, new_value, old_value
+        else:
+            raise ValueError("Invalid update syntax")

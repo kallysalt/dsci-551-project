@@ -26,18 +26,18 @@ class MyCLI(cmd.Cmd):
             self.select_database()
 
     def do_switch(self, args):
-        """Switch between databases."""
         self.select_database()
         
     def do_query(self, args):
-        """Query the current database."""
-        if self.current_db:
-            self.current_db.query(args)
-        else:
-            print("Please select a database first.")
+        try:
+            if self.current_db:
+                self.current_db.query(args)
+            else:
+                print("Please select a database first.")
+        except ValueError as e:
+            print(e)
 
     def do_exit(self, args):
-        """Exit the CLI."""
         print("Goodbye!")
         return True
 
