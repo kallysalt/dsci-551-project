@@ -37,32 +37,32 @@ class RelationalDB:
             
         elif query.startswith("group"):
             table_name, col1_name, calculation, col2_name = MyQLParser.parse_grouping(query)
-            print('table_name:', table_name, ', col1_name:', col1_name, ', calculation:', calculation, ', col2_name:', col2_name)
+            # print('table_name:', table_name, ', col1_name:', col1_name, ', calculation:', calculation, ', col2_name:', col2_name)
             self.grouping(table_name, col1_name, calculation, col2_name)
             
         elif query.startswith("calculate"):
             table_name, col_name, order = MyQLParser.parse_aggregation(query)
-            print('table_name:', table_name, ', col_name:', col_name, ', order:', order)
+            # print('table_name:', table_name, ', col_name:', col_name, ', order:', order)
             self.aggregation(table_name, col_name, order)
         
         elif query.startswith("combine"):
             table1_name, table2_name, col_name = MyQLParser.parse_inner_join(query)
-            print('table1_name:', table1_name, ', table2_name:', table2_name, ', col_name:', col_name)
+            # print('table1_name:', table1_name, ', table2_name:', table2_name, ', col_name:', col_name)
             self.inner_join(table1_name, table2_name, col_name)
         
         elif query.startswith("insert"):
             row_value, table_name = MyQLParser.parse_insert(query)
-            print('row_value:', row_value, ', table_name:', table_name)
+            # print('row_value:', row_value, ', table_name:', table_name)
             self.insert(row_value, table_name)
         
         elif query.startswith("delete"):
             table_name, col_name, value = MyQLParser.parse_delete(query)
-            print('table_name:', table_name, ', col_name:', col_name, ', value:', value)
+            # print('table_name:', table_name, ', col_name:', col_name, ', value:', value)
             self.delete(table_name, col_name, value)
         
         elif query.startswith("update"):
             table_name, col_name, new_val, old_val = MyQLParser.parse_update(query)
-            print('table_name:', table_name, ', col_name:', col_name, ', new_val:', new_val, ', old_val:', old_val)
+            # print('table_name:', table_name, ', col_name:', col_name, ', new_val:', new_val, ', old_val:', old_val)
             self.update(table_name, col_name, new_val, old_val)
         
         else:
@@ -137,12 +137,11 @@ class RelationalDB:
         # print result
         pass
     
-    # ASK: is it okay? (append record to end of csv file)
+    # ASK: append record to end of csv file?
     # assumption: noned to check for duplicates
     def insert(self, row_values, table_name):
         fn = f'rdb/{table_name}.csv'
         # check if table exists
-        
         # if not -> report err
         # check if record len is valid
         # if not -> report err

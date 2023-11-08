@@ -23,6 +23,7 @@
 - insert [row_value] into [table_name]
 - delete from [table_name] where [col_name] = [value]
 - update [table_name] set [col_name] = [new_value] where [col_name] = [old_value]
+- create table [table_name] ([col1_name]:[col1_type], [col2_name]:[col2_type], [col3_name]:[col3_type])
    
 
 ### example queries ###
