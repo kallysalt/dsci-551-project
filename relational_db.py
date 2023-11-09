@@ -178,6 +178,8 @@ class RelationalDB:
         pass  
     
     
-    # assumption: col_names cannot be null
+    # col_names cannot be null
     def create(self, table_name, col_names):
+        # create csv file with name {table_name_0}.csv
+        # set column name
         pass

@@ -128,10 +128,9 @@ class MyQLParser:
         match = re.match(r"create table (\w+)\s*\(([\w\s,]+)\)", query)
         if match:
             table_name, col_names = match.groups()
-            # Split the columns part by comma and strip whitespace from each column name
             col_names = [c.strip() for c in col_names.split(',') if c.strip()]
+            if not col_names:
+                raise ValueError("No column names provided")
             return table_name, col_names
         else:
             raise ValueError("Invalid create table syntax")
-       
-        
