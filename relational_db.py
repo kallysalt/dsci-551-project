@@ -19,7 +19,6 @@ class RelationalDB:
         else:
             print("No query provided")
         
-    # TODO: optimize performance
     def parse_query(self, query):
         query = query.lower()
         
@@ -64,6 +63,11 @@ class RelationalDB:
             table_name, col_name, new_val, old_val = MyQLParser.parse_update(query)
             # print('table_name:', table_name, ', col_name:', col_name, ', new_val:', new_val, ', old_val:', old_val)
             self.update(table_name, col_name, new_val, old_val)
+            
+        elif query.startswith("create"):
+            table_name, col_names = MyQLParser.parse_create(query)
+            print('table_name:', table_name, ', col_names:', [c for c in col_names])
+            self.create(table_name, col_names)
         
         else:
             raise ValueError("Unrecognized command")
@@ -163,12 +167,17 @@ class RelationalDB:
     
     # assumption: does not check if data type matches 
     def update(self, table_name, col1_name, new_value, old_value):
-        # fn = f'rdb/{table_name}.csv'
-        # check if table exists
+        # fn = f'rdb/{table_name}_{n}.csv'
+        # check if table exists (at least one)
         # if not -> report err
-        # read csv file (chunk by chunk)
-        # for each chunk：
+        # read csv files that start with table_name
+        # for each csv file：
         #   check if record can be found
         #   if found -> update record
         # return ok
         pass  
+    
+    
+    # assumption: col_names cannot be null
+    def create(self, table_name, col_names):
+        pass

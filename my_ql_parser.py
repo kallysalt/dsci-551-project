@@ -121,3 +121,17 @@ class MyQLParser:
             return table_name, col1_name, new_value, old_value
         else:
             raise ValueError("Invalid update syntax")
+        
+    @staticmethod
+    def parse_create(query):
+        '''create table [table_name] ([col1_name], [col2_name], [col3_name], ...)'''
+        match = re.match(r"create table (\w+)\s*\(([\w\s,]+)\)", query)
+        if match:
+            table_name, col_names = match.groups()
+            # Split the columns part by comma and strip whitespace from each column name
+            col_names = [c.strip() for c in col_names.split(',') if c.strip()]
+            return table_name, col_names
+        else:
+            raise ValueError("Invalid create table syntax")
+       
+        

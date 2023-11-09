@@ -42,4 +42,4 @@
 - query "insert 1, 2, 3 into table_name"
 - query "delete from table_name where col_name = value"
 - query "update table_name set col_name = new_value where col_name = old_value"
-   
+- query "create table table_name (col1_name, col2_name)"
