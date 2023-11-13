@@ -5,6 +5,7 @@ import sys
 import os
 import glob
 from tabulate import tabulate
+import json
 
 from my_ql_parser import MyQLParser
 
@@ -21,6 +22,29 @@ class RelationalDB:
         else:
             # Print without column names, using an empty list for headers
             print(tabulate(df, headers=[], tablefmt='plain', showindex=False, colalign=("left",)))
+    
+    def _write_dict_to_file(self, data_dict, file_path):
+        with open(file_path, 'w') as file:
+            json.dump(data_dict, file)
+
+    def _read_dict_from_file(self, file_path):
+        with open(file_path, 'r') as file:
+            return json.load(file)
+
+    def _aggregate_data(self, df, col1_name, calculation, col2_name):
+        aggregation_dict = {}
+        for _, row in df.iterrows():
+            key = row[col1_name]
+            value = row[col2_name]
+            if calculation == 'sum':
+                aggregation_dict[key] = aggregation_dict.get(key, 0) + value
+            elif calculation == 'avg':
+                if key in aggregation_dict:
+                    sum_, count_ = aggregation_dict[key]
+                    aggregation_dict[key] = (sum_ + value, count_ + 1)
+                else:
+                    aggregation_dict[key] = (value, 1)
+        return aggregation_dict
     
     def query(self, args):
         if args:
@@ -131,6 +155,11 @@ class RelationalDB:
     def ordering(self, table_name, col_name, order):
         # fn = f'rdb/{table_name}_{n}.csv'
         # not sure how to implement
+        # first sort all files and store in tmp
+        # perform merge sort on all tmp files
+        # store res in tmp files when one more entry will exceed memory size
+        # print all tmp files
+        # delete all tmp files
         pass
 
     def inner_join(self, table1_name, table2_name, col_name):
@@ -138,11 +167,69 @@ class RelationalDB:
         # not sure how to implement
         pass 
 
+    # TODO: max, min, count
     def grouping(self, table_name, col1_name, calculation, col2_name):
-        # fn = f'rdb/{table_name}_{n}.csv'
-        # not sure how to implement
-        pass  
-
+        # iterate thru all files
+        # store aggregate result in a dictionary
+        # if dictionary exceed memory size, store in tmp file
+        memory_size = 64
+        pattern = f'rdb/{table_name}_*.csv'
+        files = glob.glob(pattern)
+        if not files:
+            print(f"Error: Table {table_name} does not exist.")
+            return
+        aggregated_data = {}
+        tmp_files = []
+        for file in files:
+            df = pd.read_csv(file)
+            new_aggregated_data = self._aggregate_data(df, col1_name, calculation, col2_name)
+            # check the size of the aggregated data, if it exceeds memory size, write to temp file
+            if (sum([len(str(v)) for v in aggregated_data.values()]) + sum([len(str(v)) for v in new_aggregated_data.values()])) > memory_size:
+                tmp_file_path = f'rdb/{table_name}_temp_{len(tmp_files)}.json'
+                self._write_dict_to_file(aggregated_data, tmp_file_path)
+                tmp_files.append(tmp_file_path)
+                aggregated_data = new_aggregated_data
+            else:
+                for key, value in new_aggregated_data.items():
+                    if key in aggregated_data:
+                        if calculation == 'sum':
+                            aggregated_data[key] += value
+                        elif calculation == 'avg':
+                            sum_, count_ = aggregated_data[key]
+                            aggregated_data[key] = (sum_ + value, count_ + 1)
+                    else:
+                        aggregated_data[key] = value
+        # final aggregation from tmp files
+        for tmp_file in tmp_files:
+            tmp_aggregated_data = self._read_dict_from_file(tmp_file)
+            for key, value in tmp_aggregated_data.items():
+                if key in aggregated_data:
+                    if calculation == 'sum':
+                        aggregated_data[key] += value
+                    elif calculation == 'avg':
+                        sum_, count_ = aggregated_data[key]
+                        aggregated_data[key] = (sum_ + value[0], count_ + value[1])
+                else:
+                    aggregated_data[key] = value
+        # if calculation is 'avg', compute the final average
+        if calculation == 'avg':
+            for key, (sum_, count_) in aggregated_data.items():
+                aggregated_data[key] = sum_ / count_
+        # output the result
+        if calculation == 'avg':
+            for key in aggregated_data.keys():
+                sum_, count_ = aggregated_data[key]
+                aggregated_data[key] = sum_ / count_
+            df_result = pd.DataFrame(list(aggregated_data.items()), columns=[col1_name, f'average_of_{col2_name}'])
+        else:
+            df_result = pd.DataFrame(list(aggregated_data.items()), columns=[col1_name, f'sum_of_{col2_name}'])
+        # clean up temporary files
+        for tmp_file in tmp_files:
+            os.remove(tmp_file)
+        # print the result as a table
+        print(df_result.to_string(index=False))
+        
+    # TODO: max, min, count
     def aggregation(self, calculation, col_name, table_name):
         try:
             pattern = f'rdb/{table_name}_*.csv'

@@ -38,7 +38,7 @@
 - ...  
 - query "calculate the sum of release_year for test"
 - query "calculate the average of col_name for table_name"
-- query "group table_name by col1_name and calculate the sum of col2_name"
+- query "group yt by Channel and calculate the sum of Likes"
 - query "group table_name by col1_name and calculate the average of col2_name"
 - query "combine rows from table1_name and table2_name where their col_name values match"   
 - query "insert s15, TV Show, Crime Stories: India Detectives, 2021, TV-MA, 1 Season, 161 min into test"
