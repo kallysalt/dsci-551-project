@@ -1,5 +1,13 @@
 import re
-import utils
+
+def _to_number(value):
+        try:
+            return int(value)
+        except ValueError:
+            try:
+                return float(value) 
+            except ValueError:
+                raise ValueError(f"The value '{value}' is not a number.")
 
 class MyQLParser:
     def __init__(self):
@@ -26,7 +34,7 @@ class MyQLParser:
             match = re.match(r"find (\w+) that have a (\w+) of at least (\d+)", query)
             if match:
                 table_name, col_name, value = match.groups()
-                value = utils.to_number(value)
+                value = _to_number(value)
                 return col_name, table_name, value, ">="
             else:
                 raise ValueError("Invalid filtering syntax")
@@ -34,7 +42,7 @@ class MyQLParser:
             match = re.match(r"find (\w+) that have a (\w+) of at most (\d+)", query)
             if match:
                 table_name, col_name, value = match.groups()
-                value = utils.to_number(value)
+                value = _to_number(value)
                 return col_name, table_name, value, "<="
             else:
                 raise ValueError("Invalid filtering syntax")
@@ -42,7 +50,7 @@ class MyQLParser:
             match = re.match(r"find (\w+) that (\w+) is (.+)", query)
             if match:
                 table_name, col_name, value = match.groups()
-                value = utils.to_number(value)
+                # value = _to_number(value)
                 return col_name, table_name, value, "="
             else:
                 raise ValueError("Invalid filtering syntax")
@@ -129,8 +137,6 @@ class MyQLParser:
         if match:
             table_name, col_names = match.groups()
             col_names = [c.strip() for c in col_names.split(',') if c.strip()]
-            if not col_names:
-                raise ValueError("No column names provided")
             return table_name, col_names
         else:
             raise ValueError("Invalid create table syntax")
