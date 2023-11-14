@@ -6,6 +6,7 @@ import os
 import glob
 from tabulate import tabulate
 import json
+import heapq
 
 from my_ql_parser import MyQLParser
 
@@ -45,6 +46,63 @@ class RelationalDB:
                 else:
                     aggregation_dict[key] = (value, 1)
         return aggregation_dict
+    
+    def _bubble_sort(self, data, col_name, ascending = True):
+        n = len(data)
+        for i in range(n):
+            for j in range(0, n-i-1):
+                if (data[j][col_name] > data[j+1][col_name] and ascending) or \
+                   (data[j][col_name] < data[j+1][col_name] and not ascending):
+                    data[j], data[j+1] = data[j+1], data[j]
+    
+    def _sort_individual_files(self, table_name, col_name, order):
+        pattern = f'rdb/{table_name}_*.csv'
+        files = glob.glob(pattern)
+        ascending = order == 'ascending'
+        for file_path in files:
+            df = pd.read_csv(file_path)
+            data_list = df.to_dict('records')
+            # sort the list using the bubble sort method
+            self._bubble_sort(data_list, col_name, ascending)
+            # convert the sorted list of dictionaries back to a DataFrame
+            df_sorted = pd.DataFrame(data_list)
+            # saving the sorted DataFrame with a .tmp extension
+            tmp_file_path = f"{file_path}.tmp"
+            df_sorted.to_csv(tmp_file_path, index=False)
+
+    def _merge_and_print(self, sorted_temp_files, col_name, order):
+        # open file handles for all sorted temporary files
+        file_handles = [open(f, 'r') for f in sorted_temp_files]
+        readers = [pd.read_csv(fh, iterator=True) for fh in file_handles]
+        # fetch the first row from each file
+        current_rows = [next(reader) for reader in readers]
+        # merge and print
+        while any(rows is not None for rows in current_rows):
+            # determine the next row to print
+            next_index = None
+            next_value = None
+            for i, row in enumerate(current_rows):
+                if row is not None:
+                    value = row[col_name].iloc[0]
+                    if (next_value is None or
+                        (order == 'ascending' and value < next_value) or
+                        (order == 'descending' and value > next_value)):
+                        next_index = i
+                        next_value = value
+            # print the next row
+            
+            if next_index is not None:
+                print(current_rows[next_index].to_csv(header=False, index=False).strip())
+                try:
+                    current_rows[next_index] = next(readers[next_index])
+                except StopIteration:
+                    current_rows[next_index] = None
+                    file_handles[next_index].close()  # close the file handle when done
+        # Clean up: close any remaining open files and delete temporary files
+        for fh in file_handles:
+            fh.close()
+        for f in sorted_temp_files:
+            os.remove(f)
     
     def query(self, args):
         if args:
@@ -153,15 +211,17 @@ class RelationalDB:
                 i += 1
 
     def ordering(self, table_name, col_name, order):
-        # fn = f'rdb/{table_name}_{n}.csv'
-        # not sure how to implement
-        # first sort all files and store in tmp
-        # perform merge sort on all tmp files
-        # store res in tmp files when one more entry will exceed memory size
-        # print all tmp files
-        # delete all tmp files
-        pass
-
+        # sort all files individually and store in temporary .tmp files
+        self._sort_individual_files(table_name, col_name, order)
+        # perform external merge sort on all the sorted .tmp files
+        pattern = f'rdb/{table_name}_*.csv.tmp'
+        temp_files = glob.glob(pattern)
+        if temp_files:
+            # print the header
+            df = pd.read_csv(f'rdb/{table_name}_0.csv', nrows=0)
+            print(','.join(df.columns))
+        self._merge_and_print(temp_files, col_name, order)
+        
     def inner_join(self, table1_name, table2_name, col_name):
         # fn = f'rdb/{table_name}_{n}.csv'
         # not sure how to implement

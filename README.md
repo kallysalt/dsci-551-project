@@ -33,7 +33,7 @@
 - query "find test that have a release_year of at least 2020"
 - query "find test that release_year is 2020"
 - query "order netflix23 by release_year in descending order"
-- query "order netflix23 by release_year in ascending order"
+- query "order test by release_year in ascending order"
 - query "find test that title is 2020"
 - ...  
 - query "calculate the sum of release_year for test"
