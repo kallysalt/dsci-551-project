@@ -7,6 +7,18 @@ import heapq
 from collections import defaultdict
 
 
+class SortWrapper:
+    def __init__(self, item, ascending=True):
+        self.item = item
+        self.ascending = ascending
+
+    def __lt__(self, other):
+        if self.ascending:
+            return self.item < other.item
+        else:
+            return self.item > other.item
+
+
 class MyNoSQL:
     MEMORY_SIZE = 1000
 
@@ -81,12 +93,66 @@ class MyNoSQL:
                 break
 
         return output_files
-    
+
     def _get_nested_value(self, entry, key_path):
         """Retrieve a value from a nested dictionary given a key path."""
         for key in key_path.split('.'):
+            if not isinstance(entry, dict):
+                return None  # Return None if the current entry is not a dictionary
             entry = entry.get(key, {})
         return entry
+    
+    def _update_nested_value(self, d, u):
+        """Recursively update a nested dictionary."""
+        for k, v in u.items():
+            if isinstance(v, dict):
+                if not isinstance(d.get(k, {}), dict):
+                    raise ValueError(f"Cannot update nested field '{k}' as it is not a dictionary.")
+                d[k] = self._update_nested_value(d.get(k, {}), v)
+            else:
+                d[k] = v
+        return d
+
+
+    def _matches_condition(self, entry, field, condition):
+        """Check if an entry matches a given condition on a field."""
+        value = self._get_nested_value(entry, field)
+        operator, target = next(iter(condition.items()))
+
+        # Check if value is None (field not present or null) or if types are incompatible
+        if value is None or not isinstance(value, type(target)):
+            return False
+
+        if operator == '$gt':
+            return value > target
+        elif operator == '$lt':
+            return value < target
+        elif operator == '$gte':
+            return value >= target
+        elif operator == '$lte':
+            return value <= target
+        elif operator == '$eq':
+            return value == target
+        else:
+            return False  # Unsupported operator
+
+    def _evaluate_and(self, conditions, entry):
+        """Check if an entry satisfies all given AND conditions."""
+        return all(self._evaluate_condition(entry, cond) for cond in conditions)
+
+    def _evaluate_or(self, conditions, entry):
+        """Check if an entry satisfies any of the given OR conditions."""
+        return any(self._evaluate_condition(entry, cond) for cond in conditions)
+
+    def _evaluate_condition(self, entry, condition):
+        """Evaluate a condition (which could be complex) against an entry."""
+        if '$and' in condition:
+            return self._evaluate_and(condition['$and'], entry)
+        elif '$or' in condition:
+            return self._evaluate_or(condition['$or'], entry)
+        else:
+            field, cond = next(iter(condition.items()))
+            return self._matches_condition(entry, field, cond)
 
     def insert(self, collection, document):
         # Add _id and _updated fields to the document
@@ -108,21 +174,31 @@ class MyNoSQL:
     def find(self, collection, query=None):
         partition_paths = self._get_all_partition_paths(collection)
 
-        if not query:
-            return partition_paths
-
         def generate_entries():
             for partition_path in partition_paths:
                 with open(partition_path, 'r') as f:
                     for line in f:
                         entry = json.loads(line)
-                        if not query or all(item in entry.items() for item in query.items()):
+                        if query is None or self._evaluate_condition(entry, query):
+                            yield json.dumps(entry)
+
+        output_files = self._write_to_chunk(generate_entries())
+        return output_files
+
+    def filter(self, input_file_paths, query=None):
+        def generate_entries():
+            for partition_path in input_file_paths:
+                with open(partition_path, 'r') as f:
+                    for line in f:
+                        entry = json.loads(line)
+                        if query is None or self._evaluate_condition(entry, query):
                             yield json.dumps(entry)
 
         output_files = self._write_to_chunk(generate_entries())
         return output_files
 
     def project(self, input_file_paths, projection_fields):
+        print(projection_fields)
         def generate_projected_entries():
             for file_path in input_file_paths:
                 with open(file_path, 'r') as f:
@@ -156,9 +232,9 @@ class MyNoSQL:
                         partition_size += len(line.encode('utf-8'))
                         continue
 
-                    if all(item in entry.items() for item in query.items()):
+                    if query is None or self._evaluate_condition(entry, query):
                         # Document matches query, update it
-                        entry.update(new_values)
+                        self._update_nested_value(entry, new_values)
                         entry['_updated'] = update_timestamp
                         updated_document = json.dumps(entry) + "\n"
                         updated_document_size = len(
@@ -196,7 +272,7 @@ class MyNoSQL:
                 for line in f:
                     entry = json.loads(line)
                     # Write the line to temp file only if it does not match the query
-                    if not all(item in entry.items() for item in query.items()):
+                    if not (query is None or self._evaluate_condition(entry, query)):
                         tf.write(line)
 
             # Replace the original partition with the temp file
@@ -223,32 +299,41 @@ class MyNoSQL:
 
         output_files = self._write_to_chunk(generate_joined_entries())
         return output_files
-    
+
     def group_and_aggregate(self, input_file_paths, group_key, aggregations):
+        DEFAULT_GROUP_VALUE = 'all'  # Default group value for empty group_key
+
         for file_path in input_file_paths:
             temp_aggregation_data = defaultdict(lambda: defaultdict(float))
 
             with open(file_path, 'r') as file:
                 for line in file:
                     entry = json.loads(line)
-                    if group_key in entry:
-                        group_value = entry[group_key]
 
+                    group_value = self._get_nested_value(
+                        entry, group_key) if group_key is not None else DEFAULT_GROUP_VALUE
+
+                    if group_value:
                         # Update the aggregation data for this group_value
-                        temp_aggregation_data[group_value]['_count'] += 1  # Count each occurrence
+                        # Count each occurrence
+                        temp_aggregation_data[group_value]['_count'] += 1
                         for field, agg in aggregations.items():
-                            if field in entry:
+                            filed_value = self._get_nested_value(entry, field)
+                            if filed_value:
                                 if agg in ['sum', 'avg']:
-                                    temp_aggregation_data[group_value][agg] += entry[field]
+                                    temp_aggregation_data[group_value][agg] += filed_value
                                 elif agg == 'min':
-                                    temp_aggregation_data[group_value][agg] = min(temp_aggregation_data[group_value][agg], entry[field])
+                                    temp_aggregation_data[group_value][agg] = min(
+                                        temp_aggregation_data[group_value][agg], filed_value)
                                 elif agg == 'max':
-                                    temp_aggregation_data[group_value][agg] = max(temp_aggregation_data[group_value][agg], entry[field])
-
+                                    temp_aggregation_data[group_value][agg] = max(
+                                        temp_aggregation_data[group_value][agg], filed_value)
+                                    
             # Update the aggregation data in the corresponding temp files
             for group_value, aggregation in temp_aggregation_data.items():
-                temp_file_path = os.path.join(self.db_directory, f"group_{group_value}.tmp")
-                
+                temp_file_path = os.path.join(
+                    self.db_directory, f"group_{group_value}.tmp")
+
                 if os.path.exists(temp_file_path):
                     with open(temp_file_path, 'r') as temp_file:
                         existing_data = json.loads(temp_file.read())
@@ -256,14 +341,17 @@ class MyNoSQL:
                     for agg in aggregations.values():
                         if agg in ['sum', 'avg']:
                             aggregation[agg] += existing_data.get(agg, 0)
+                        elif agg == 'min':
+                            aggregation[agg] = min(aggregation[agg], existing_data.get(agg, 0))
+                        elif agg == 'max':
+                            aggregation[agg] = max(aggregation[agg], existing_data.get(agg, 0))
 
                     # Combine counts
                     aggregation['_count'] += existing_data.get('_count', 0)
-                    aggregation[group_key] = group_value
+                    if group_key is not None:
+                        aggregation[group_key] = group_value
 
-                    # Update avg if needed
-                    if 'avg' in aggregations.values():
-                        aggregation['avg'] = aggregation['sum'] / aggregation['_count']
+                    
 
                 with open(temp_file_path, 'w') as temp_file:
                     temp_file.write(json.dumps(aggregation))
@@ -273,14 +361,17 @@ class MyNoSQL:
             for temp_file_name in os.listdir(self.db_directory):
                 if temp_file_name.startswith("group_") and temp_file_name.endswith(".tmp"):
                     with open(os.path.join(self.db_directory, temp_file_name), 'r') as temp_file:
-                        yield temp_file.read()
-                    os.remove(os.path.join(db.db_directory, temp_file_name))
-                    
+                        # Update avg if needed
+                        existing_data = json.loads(temp_file.read())
+                        if 'avg' in existing_data:
+                            existing_data['avg'] /= existing_data['_count']
+                        yield json.dumps(existing_data)
+                    os.remove(os.path.join(self.db_directory, temp_file_name))
 
         final_output_files = self._write_to_chunk(generate_final_output())
 
         return final_output_files
-    
+
     def ordering(self, input_file_paths, sort_keys, ascending=True):
         sorted_temp_files = []
 
@@ -289,16 +380,19 @@ class MyNoSQL:
             with open(file_path, 'r') as file:
                 data = [json.loads(line) for line in file]
                 # Sort the data based on nested keys and order
-                data.sort(key=lambda x: tuple(self._get_nested_value(x, k) for k in sort_keys), reverse=not ascending)
-                sorted_temp_file_path = os.path.join(self.db_directory, f"sorted_{file_index}.tmp")
+                data.sort(key=lambda x: tuple(self._get_nested_value(x, k)
+                          for k in sort_keys), reverse=not ascending)
+                sorted_temp_file_path = os.path.join(
+                    self.db_directory, f"sorted_{file_index}.tmp")
                 with open(sorted_temp_file_path, 'w') as sorted_temp_file:
                     for entry in data:
                         sorted_temp_file.write(json.dumps(entry) + "\n")
                 sorted_temp_files.append(sorted_temp_file_path)
 
-        # Step 2: Merge sorted files using a multi-way merge algorithm
+       # Step 2: Merge sorted files using a multi-way merge algorithm
         def merge_sorted_files(sorted_files, sort_keys, ascending):
-            merged_file_path = os.path.join(self.db_directory, "merged_output.tmp")
+            merged_file_path = os.path.join(
+                self.db_directory, "merged_output.tmp")
             with open(merged_file_path, 'w') as outfile:
                 # Create a priority queue and initialize it with the first line of each file
                 pq = []
@@ -307,7 +401,8 @@ class MyNoSQL:
                     line = f.readline()
                     if line:
                         entry = json.loads(line)
-                        sort_values = tuple(self._get_nested_value(entry, k) for k in sort_keys)
+                        sort_values = SortWrapper(
+                            tuple(self._get_nested_value(entry, k) for k in sort_keys), ascending)
                         heapq.heappush(pq, (sort_values, line, f))
 
                 # Process the priority queue and write to the merged file
@@ -317,7 +412,8 @@ class MyNoSQL:
                     next_line = f.readline()
                     if next_line:
                         next_entry = json.loads(next_line)
-                        sort_values = tuple(self._get_nested_value(next_entry, k) for k in sort_keys)
+                        sort_values = SortWrapper(tuple(self._get_nested_value(
+                            next_entry, k) for k in sort_keys), ascending)
                         heapq.heappush(pq, (sort_values, next_line, f))
 
                 # Close all file handles
@@ -327,7 +423,8 @@ class MyNoSQL:
             return merged_file_path
 
         # Apply multi-way merge to the sorted temp files
-        merged_file_path = merge_sorted_files(sorted_temp_files, sort_keys, ascending)
+        merged_file_path = merge_sorted_files(
+            sorted_temp_files, sort_keys, ascending)
 
         # Step 3: Write final output using _write_to_chunk
         def generate_sorted_data():
@@ -336,7 +433,7 @@ class MyNoSQL:
                     yield line.rstrip('\n')
 
         final_output_files = self._write_to_chunk(generate_sorted_data())
-        
+
         # Cleanup temporary sorted files and merged file
         for temp_file in sorted_temp_files:
             os.remove(temp_file)
@@ -351,37 +448,38 @@ class MyNoSQL:
                     print(line.strip())
 
         # Remove all the file ends with .tmp
-        # all_files = os.listdir(self.db_directory)
-        # for tmp_file in [file for file in all_files if file.endswith('.tmp')]:
-        #     tmp_file_path = os.path.join(self.db_directory, tmp_file)
-        #     os.remove(tmp_file_path)
+        all_files = os.listdir(self.db_directory)
+        for tmp_file in [file for file in all_files if file.endswith('.tmp')]:
+            tmp_file_path = os.path.join(self.db_directory, tmp_file)
+            # os.remove(tmp_file_path)
 
 
 if __name__ == '__main__':
     db = MyNoSQL()
 
+    # # Clean old data for testing
+    # for temp_file_name in os.listdir(db.db_directory):
+    #     if temp_file_name.endswith(".json"):
+    #         os.remove(os.path.join(db.db_directory, temp_file_name))
 
-    # Clean old data for testing
-    for temp_file_name in os.listdir(db.db_directory):
-        if temp_file_name.endswith(".json"):
-            os.remove(os.path.join(db.db_directory, temp_file_name))
+    # Test find
+    # for i in range(50):
+    #     db.insert('collection1', {'test': {'test_value': i}})
 
-
-    # db.update('test_collection', {'aaa' : {'a': 1}}, {'aaa' : 'AAAAAAAAAAAAAAAAAAAAAAAAAA'})
-    # tmp_files = db.find('test_collection', {
-    #                     "aaa": "AAAAAAAAAAAAAAAAAAAAAAAAAA"})
-    # tmp_files = db.project(tmp_files, ['_id'])
-    # tmp_files = db.ordering(db._get_all_partition_paths(''))
-    # db.output_and_cleanup_all_tmp(tmp_files)
-
-    ## test ordering
-    # for i in range(100):
-    #     db.insert('test_collection', {'a' : {'a': i}})
-    # files = db.find('test_collection')
-    # files = db.ordering(files, ["a.a"])
+    # files = db.find('collection1', {"$or": [
+    #     {'test.test_value': {'$gt': 40}},
+    #     {'test.test_value': {'$lt': 3}},
+    #     ]})
     # db.output_and_cleanup_all_tmp(files)
 
-    ## test join
+    # test ordering
+    # for i in range(100):
+    #     db.insert('test_order', {'a' : {'a': i}})
+    # files = db.find('test_order')
+    # files = db.ordering(files, ["a.a"], ascending=False)
+    # db.output_and_cleanup_all_tmp(files)
+
+    # test join
     # for i in range(50):
     #     db.insert('collection1', {'join_key': i, 'collection1_value': f"value1_{i}"})
     # for i in range(50):
@@ -392,30 +490,25 @@ if __name__ == '__main__':
     # joined_files = db.join(files1, files2, join_key)
     # final_output_files = db.output_and_cleanup_all_tmp(joined_files)
 
-    ## Test Aggregate & Grouping
-    # 生成销售数据
-    items = ['item1', 'item2', 'item3']
-    for i in range(30):
-        db.insert('sales', {
-            'item': items[i % len(items)],
-            'quantity': i + 1,
-            'price': (i + 1) * 10
-        })
+    # Test Aggregate & Grouping
+    # items = ['item1', 'item2', 'item3']
+    # for i in range(30):
+    #     db.insert('sales', {
+    #         'item': items[i % len(items)],
+    #         'quantity': i + 1,
+    #         'price': (i + 1) * 10
+    #     })
 
-    # 找到销售数据
-    sales_files = db.find('sales')
+    # sales_files = db.find('sales')
 
-    # 定义分组键和聚合操作
-    group_key = 'item'
-    aggregations = {
-        'quantity': 'sum',
-        'price': 'avg'
-    }
+    # group_key = 'item'
+    # aggregations = {
+    #     'quantity': 'sum',
+    #     'price': 'avg'
+    # }
 
-    # 进行分组和聚合操作
-    grouped_file = db.group_and_aggregate(sales_files, group_key, aggregations)
+    # grouped_file = db.group_and_aggregate(sales_files, group_key, aggregations)
 
-    # 输出分组和聚合结果，并清理临时文件
-    db.output_and_cleanup_all_tmp(grouped_file)
+    # db.output_and_cleanup_all_tmp(grouped_file)
 
-    # print(db.delete('test_collection', {'aaa': 0}))
+    # # print(db.delete('test_collection', {'aaa': 0}))
