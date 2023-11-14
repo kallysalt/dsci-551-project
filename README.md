@@ -31,15 +31,15 @@
 - query "get type, title from test"
 - query "find test that have a release_year of at most 2020"
 - query "find test that have a release_year of at least 2020"
-- query "find test that release_year is 2020"
-- query "order netflix23 by release_year in descending order"
+- query "find test that release_year is 2020" # FIX
+- query "order test by release_year in descending order"
 - query "order test by release_year in ascending order"
-- query "find test that title is 2020"
+- query "find test that title is 2020" # FIX
 - ...  
 - query "calculate the sum of release_year for test"
-- query "calculate the average of col_name for table_name"
+- query "calculate the average of release_year for test" # FIX
 - query "group yt by Channel and calculate the sum of Likes"
-- query "group table_name by col1_name and calculate the average of col2_name"
+- query "group yt by Channel and calculate the average of Likes" # FIX
 - query "combine rows from table1_name and table2_name where their col_name values match"   
 - query "insert s15, TV Show, Crime Stories: India Detectives, 2021, TV-MA, 1 Season, 161 min into test"
 - query "delete from test where title = Falsa identidad"

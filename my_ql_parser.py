@@ -63,7 +63,8 @@ class MyQLParser:
         match = re.match(r"order (\w+) by (\w+) in (descending|ascending) order", query)
         if match:
             table_name, col_name, order = match.groups()
-            return table_name, col_name, order
+            asecending = order == "ascending"
+            return table_name, col_name, asecending
         else:
             raise ValueError("Invalid ordering syntax")
         
@@ -79,11 +80,12 @@ class MyQLParser:
     
     @staticmethod
     def parse_aggregation(query):
-        '''calculate the [sum / average] of [col_name] for [table_name]'''
+        '''calculate the [sum / average ] of [col_name] for [table_name]'''
+        # TODO: add parser for count
         match = re.match(r"calculate the (sum|average) of (\w+) for (\w+)", query)
         if match:
-            calculation, col_name, table_name = match.groups()
-            return calculation, col_name, table_name
+            type, col_name, table_name = match.groups()
+            return type, col_name, table_name
         else:
             raise ValueError("Invalid aggregation syntax")
     

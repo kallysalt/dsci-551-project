@@ -6,7 +6,7 @@ import os
 import glob
 from tabulate import tabulate
 import json
-import heapq
+import typing
 
 from my_ql_parser import MyQLParser
 
@@ -17,12 +17,8 @@ class RelationalDB:
         pass
     
     def _print_df(self, df, i):
-        if i == 0:
-            # Print with column names
-            print(tabulate(df, headers='keys', tablefmt='plain', showindex=False, colalign=("left",)))
-        else:
-            # Print without column names, using an empty list for headers
-            print(tabulate(df, headers=[], tablefmt='plain', showindex=False, colalign=("left",)))
+        header = True if i == 0 else False
+        print(df.to_csv(index = False, header = header))
     
     def _write_dict_to_file(self, data_dict, file_path):
         with open(file_path, 'w') as file:
@@ -55,14 +51,13 @@ class RelationalDB:
                    (data[j][col_name] < data[j+1][col_name] and not ascending):
                     data[j], data[j+1] = data[j+1], data[j]
     
-    def _sort_individual_files(self, table_name, col_name, order):
+    def _sort_individual_files(self, table_name, col_name, ascending):
         pattern = f'rdb/{table_name}_*.csv'
         files = glob.glob(pattern)
-        ascending = order == 'ascending'
         for file_path in files:
             df = pd.read_csv(file_path)
             data_list = df.to_dict('records')
-            # sort the list using the bubble sort method
+            # sort the list using bubble sort
             self._bubble_sort(data_list, col_name, ascending)
             # convert the sorted list of dictionaries back to a DataFrame
             df_sorted = pd.DataFrame(data_list)
@@ -70,7 +65,7 @@ class RelationalDB:
             tmp_file_path = f"{file_path}.tmp"
             df_sorted.to_csv(tmp_file_path, index=False)
 
-    def _merge_and_print(self, sorted_temp_files, col_name, order):
+    def _merge_and_print(self, sorted_temp_files, col_name, ascending):
         # open file handles for all sorted temporary files
         file_handles = [open(f, 'r') for f in sorted_temp_files]
         readers = [pd.read_csv(fh, iterator=True) for fh in file_handles]
@@ -84,13 +79,10 @@ class RelationalDB:
             for i, row in enumerate(current_rows):
                 if row is not None:
                     value = row[col_name].iloc[0]
-                    if (next_value is None or
-                        (order == 'ascending' and value < next_value) or
-                        (order == 'descending' and value > next_value)):
+                    if (next_value is None or (ascending and value < next_value) or (not ascending and value > next_value)):
                         next_index = i
                         next_value = value
             # print the next row
-            
             if next_index is not None:
                 print(current_rows[next_index].to_csv(header=False, index=False).strip())
                 try:
@@ -98,7 +90,7 @@ class RelationalDB:
                 except StopIteration:
                     current_rows[next_index] = None
                     file_handles[next_index].close()  # close the file handle when done
-        # Clean up: close any remaining open files and delete temporary files
+        # close any remaining open files and delete temporary files
         for fh in file_handles:
             fh.close()
         for f in sorted_temp_files:
@@ -113,8 +105,6 @@ class RelationalDB:
             print("No query provided")
         
     def parse_query(self, query):
-        # query = query.lower()
-        
         if query.startswith("get"):
             col_names, table_name = MyQLParser.parse_projection(query)
             self.projection(col_names, table_name)
@@ -124,37 +114,31 @@ class RelationalDB:
             self.filtering(col_name, table_name, value, criteria)
             
         elif query.startswith("order"):
-            table_name, col_name, order = MyQLParser.parse_ordering(query)
-            self.ordering(table_name, col_name, order)
+            table_name, col_name, ascending = MyQLParser.parse_ordering(query)
+            self.ordering(table_name, col_name, ascending)
             
         elif query.startswith("group"):
             table_name, col1_name, calculation, col2_name = MyQLParser.parse_grouping(query)
-            # print('table_name:', table_name, ', col1_name:', col1_name, ', calculation:', calculation, ', col2_name:', col2_name)
             self.grouping(table_name, col1_name, calculation, col2_name)
             
         elif query.startswith("calculate"):
             table_name, col_name, order = MyQLParser.parse_aggregation(query)
-            # print('table_name:', table_name, ', col_name:', col_name, ', order:', order)
             self.aggregation(table_name, col_name, order)
         
         elif query.startswith("combine"):
             table1_name, table2_name, col_name = MyQLParser.parse_inner_join(query)
-            # print('table1_name:', table1_name, ', table2_name:', table2_name, ', col_name:', col_name)
             self.inner_join(table1_name, table2_name, col_name)
         
         elif query.startswith("insert"):
             row_value, table_name = MyQLParser.parse_insert(query)
-            # print('row_value:', row_value, ', table_name:', table_name)
             self.insert(row_value, table_name)
         
         elif query.startswith("delete"):
             table_name, col_name, value = MyQLParser.parse_delete(query)
-            # print('table_name:', table_name, ', col_name:', col_name, ', value:', value)
             self.delete(table_name, col_name, value)
         
         elif query.startswith("update"):
             table_name, col_name, new_val, old_val = MyQLParser.parse_update(query)
-            # print('table_name:', table_name, ', col_name:', col_name, ', new_val:', new_val, ', old_val:', old_val)
             self.update(table_name, col_name, new_val, old_val)
             
         elif query.startswith("create"):
@@ -168,9 +152,9 @@ class RelationalDB:
     # TODO: pretty print
     def projection(self, col_names, table_name):
         pattern = f'rdb/{table_name}_*.csv'
-        # check if table exists
         files = glob.glob(pattern)
-        files.sort()
+        files.sort() # ASK
+        # check if table exists
         if not files:
             print(f"Error: Table {table_name} does not exist.")
         else:
@@ -183,12 +167,11 @@ class RelationalDB:
                 os.remove(tmp_fn)
                 i += 1
               
-    # TODO: pretty print
     def filtering(self, col_name, table_name, value, criteria):
         pattern = f'rdb/{table_name}_*.csv'
-        # check if table exists
         files = glob.glob(pattern)
-        files.sort()
+        files.sort() # ASK
+        # check if table exists
         if not files:
             print(f"Error: Table {table_name} does not exist.")
         else:
@@ -230,7 +213,7 @@ class RelationalDB:
     # TODO: max, min, count
     def grouping(self, table_name, col1_name, calculation, col2_name):
         # iterate thru all files
-        # store aggregate result in a dictionary
+        # store aggregation result in a dictionary
         # if dictionary exceed memory size, store in tmp file
         memory_size = 64
         pattern = f'rdb/{table_name}_*.csv'
@@ -289,30 +272,36 @@ class RelationalDB:
         # print the result as a table
         print(df_result.to_string(index=False))
         
-    # TODO: max, min, count
-    def aggregation(self, calculation, col_name, table_name):
+    # TODO: max, min
+    def aggregation(self, type, col_name, table_name):
         try:
             pattern = f'rdb/{table_name}_*.csv'
-            # check if table exists
             files = glob.glob(pattern)
+            # check if table exists
             if not files:
                 print(f"Error: Table {table_name} does not exist.")
             else:
                 aggregated_value = 0
-                record_count = 0
+                aggregated_count = 0
                 for file in files:
                     df = pd.read_csv(file)
                     aggregated_value += df[col_name].sum()
-                    if calculation == 'avg':
-                        record_count += len(df)
-                if calculation == 'avg' and record_count > 0:
-                    aggregated_value /= record_count
-                print(aggregated_value)
+                    if type != 'avg':
+                        aggregated_count += len(df)
+                # print aggregated value
+                if type == 'sum':
+                    print(aggregated_value)
+                elif type == 'count':
+                    print(aggregated_count)
+                elif type == 'avg' and aggregated_count == 0:
+                    print(0)
+                elif type == 'avg' and aggregated_count > 0:
+                    print(aggregated_value / aggregated_count)
         except ValueError:
             print(f"Error: Column {col_name} in table {table_name} contains non-numeric value.")
 
-    # note: does not check for duplicates
-    # TODO: check for duplicates? check for data type?
+    # TODO: check for duplicates
+    # TODO: check for data type
     def insert(self, row_values, table_name):
         pattern = f'rdb/{table_name}_*.csv'
         files = glob.glob(pattern)
@@ -340,9 +329,11 @@ class RelationalDB:
                     # create a new csv file
                     max_index += 1
                     new_file = f'rdb/{table_name}_{max_index}.csv'
-                    new_df = pd.DataFrame(columns=first_file_df.columns)
+                    # set column names
+                    new_df = pd.DataFrame(columns = first_file_df.columns)
+                    # insert row
                     new_df.loc[0] = row_values
-                    new_df.to_csv(new_file, index=False)
+                    new_df.to_csv(new_file, index = False)
                 print("Insert operation completed successfully.")
             
     # note: does not delete file if no more rows left
@@ -356,6 +347,7 @@ class RelationalDB:
             for file in files:
                 df = pd.read_csv(file)
                 if value in df[col_name].values:
+                    # delete matching record(s)
                     df = df[df[col_name] != value]
                     df.to_csv(file, index=False)
             print("Delete operation completed successfully.")
@@ -371,15 +363,15 @@ class RelationalDB:
         else:
             for file in files:
                 df = pd.read_csv(file)
+                # update matching record(s)
                 if old_value in df[col_name].values:
                     df[col_name] = df[col_name].replace(old_value, new_value)
-                    df.to_csv(file, index=False)
+                    df.to_csv(file, index = False)
             print("Update operation completed successfully.")
     
     # TODO: specify data type
     def create(self, table_name, col_names):
         fn = f'rdb/{table_name}_0.csv'
-        # check if table exists
         if os.path.exists(fn):
             print(f"Error: Table '{table_name}' already exists.")
         else:
