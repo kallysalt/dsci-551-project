@@ -25,8 +25,7 @@ class MyCLI(cmd.Cmd):
     def __execute__(self, command):
         """Execute a command on the selected database."""
         if self.db_type == 'json':
-            result = self.parser.execute(command)
-            print(result)
+            self.parser.execute(command)
 
     def do_switch(self, args):
         """Switch between databases."""

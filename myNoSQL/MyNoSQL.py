@@ -2,30 +2,64 @@ import os
 import json
 import time
 import uuid
-import hashlib
+import base64
 import heapq
 from collections import defaultdict
 
-
 class SortWrapper:
-    def __init__(self, item, ascending=True):
-        self.item = item
+    def __init__(self, entry, sort_keys, ascending=True):
+        self.entry = entry
+        self.sort_keys = sort_keys
         self.ascending = ascending
 
-    def __lt__(self, other):
-        if self.ascending:
-            return self.item < other.item
-        else:
-            return self.item > other.item
+    def _get_nested_value(self, entry, key_path):
+        """Retrieve a value from a nested dictionary given a key path."""
+        for key in key_path.split('.'):
+            if not isinstance(entry, dict):
+                return None
+            entry = entry.get(key)
+        return entry
 
+    def _get_sort_values(self):
+        """Extract sort values following MongoDB's sorting rules."""
+        sort_values = []
+        for key in self.sort_keys:
+            value = self._get_nested_value(self.entry, key)
+            # Define the order: None, numeric, string, dict, etc.
+            if value is None:
+                sort_values.append((0, None))
+            elif isinstance(value, (int, float)):
+                sort_values.append((1, value))
+            elif isinstance(value, str):
+                sort_values.append((2, value))
+            elif isinstance(value, dict):
+                sort_values.append((3, json.dumps(value, sort_keys=True)))
+            else:
+                sort_values.append((4, str(value)))  # Fallback for other types
+        return tuple(sort_values)
+
+    def __lt__(self, other):
+        self_values = self._get_sort_values()
+        other_values = other._get_sort_values()
+        if self.ascending:
+            return self_values < other_values
+        else:
+            return self_values > other_values
 
 class MyNoSQL:
-    MEMORY_SIZE = 1000
+    MEMORY_SIZE = 5 * 1000 * 1000  # 5 MB
+    # MEMORY_SIZE = 1000
 
     def __init__(self, db_directory='./myNoSQL/data'):
         self.db_directory = db_directory
         if not os.path.exists(db_directory):
             os.makedirs(db_directory)
+
+    def _safe_encode(self, text):
+        """Encode a string into a safe format for filenames using Base64."""
+        if isinstance(text, str):
+            text = text.encode('utf-8')
+        return base64.urlsafe_b64encode(text).decode('utf-8')
 
     def _generate_id(self):
         # Generate a unique identifier for a document
@@ -101,23 +135,30 @@ class MyNoSQL:
                 return None  # Return None if the current entry is not a dictionary
             entry = entry.get(key, {})
         return entry
-    
+
     def _update_nested_value(self, d, u):
         """Recursively update a nested dictionary."""
         for k, v in u.items():
             if isinstance(v, dict):
                 if not isinstance(d.get(k, {}), dict):
-                    raise ValueError(f"Cannot update nested field '{k}' as it is not a dictionary.")
+                    raise ValueError(
+                        f"Cannot update nested field '{k}' as it is not a dictionary.")
                 d[k] = self._update_nested_value(d.get(k, {}), v)
             else:
                 d[k] = v
         return d
 
-
     def _matches_condition(self, entry, field, condition):
         """Check if an entry matches a given condition on a field."""
         value = self._get_nested_value(entry, field)
         operator, target = next(iter(condition.items()))
+
+        if operator == '$has':
+            return isinstance(value, list) and target in value
+
+        if isinstance(value, (int, float)) and isinstance(target, (int, float)):
+            value = float(value)
+            target = float(target)
 
         # Check if value is None (field not present or null) or if types are incompatible
         if value is None or not isinstance(value, type(target)):
@@ -174,6 +215,9 @@ class MyNoSQL:
     def find(self, collection, query=None):
         partition_paths = self._get_all_partition_paths(collection)
 
+        if query is None:
+            return partition_paths
+
         def generate_entries():
             for partition_path in partition_paths:
                 with open(partition_path, 'r') as f:
@@ -198,7 +242,6 @@ class MyNoSQL:
         return output_files
 
     def project(self, input_file_paths, projection_fields):
-        print(projection_fields)
         def generate_projected_entries():
             for file_path in input_file_paths:
                 with open(file_path, 'r') as f:
@@ -328,30 +371,34 @@ class MyNoSQL:
                                 elif agg == 'max':
                                     temp_aggregation_data[group_value][agg] = max(
                                         temp_aggregation_data[group_value][agg], filed_value)
-                                    
+
             # Update the aggregation data in the corresponding temp files
             for group_value, aggregation in temp_aggregation_data.items():
+                safe_group_value = self._safe_encode(str(group_value))
                 temp_file_path = os.path.join(
-                    self.db_directory, f"group_{group_value}.tmp")
+                    self.db_directory, f"group_{safe_group_value}.tmp")
+                if group_key is not None:
+                    aggregation[group_key] = group_value
 
                 if os.path.exists(temp_file_path):
                     with open(temp_file_path, 'r') as temp_file:
                         existing_data = json.loads(temp_file.read())
 
                     for agg in aggregations.values():
-                        if agg in ['sum', 'avg']:
-                            aggregation[agg] += existing_data.get(agg, 0)
-                        elif agg == 'min':
-                            aggregation[agg] = min(aggregation[agg], existing_data.get(agg, 0))
-                        elif agg == 'max':
-                            aggregation[agg] = max(aggregation[agg], existing_data.get(agg, 0))
+                        try:
+                            if agg in ['sum', 'avg']:
+                                aggregation[agg] += existing_data.get(agg, 0)
+                            elif agg == 'min':
+                                aggregation[agg] = min(
+                                    aggregation[agg], existing_data.get(agg, 0))
+                            elif agg == 'max':
+                                aggregation[agg] = max(
+                                    aggregation[agg], existing_data.get(agg, 0))
+                        except:
+                            print(aggregation[agg], existing_data.get(agg, 0))
 
                     # Combine counts
                     aggregation['_count'] += existing_data.get('_count', 0)
-                    if group_key is not None:
-                        aggregation[group_key] = group_value
-
-                    
 
                 with open(temp_file_path, 'w') as temp_file:
                     temp_file.write(json.dumps(aggregation))
@@ -380,8 +427,7 @@ class MyNoSQL:
             with open(file_path, 'r') as file:
                 data = [json.loads(line) for line in file]
                 # Sort the data based on nested keys and order
-                data.sort(key=lambda x: tuple(self._get_nested_value(x, k)
-                          for k in sort_keys), reverse=not ascending)
+                data.sort(key=lambda x: SortWrapper(x, sort_keys, ascending))
                 sorted_temp_file_path = os.path.join(
                     self.db_directory, f"sorted_{file_index}.tmp")
                 with open(sorted_temp_file_path, 'w') as sorted_temp_file:
@@ -401,8 +447,7 @@ class MyNoSQL:
                     line = f.readline()
                     if line:
                         entry = json.loads(line)
-                        sort_values = SortWrapper(
-                            tuple(self._get_nested_value(entry, k) for k in sort_keys), ascending)
+                        sort_values = SortWrapper(entry, sort_keys, ascending)
                         heapq.heappush(pq, (sort_values, line, f))
 
                 # Process the priority queue and write to the merged file
@@ -412,8 +457,7 @@ class MyNoSQL:
                     next_line = f.readline()
                     if next_line:
                         next_entry = json.loads(next_line)
-                        sort_values = SortWrapper(tuple(self._get_nested_value(
-                            next_entry, k) for k in sort_keys), ascending)
+                        sort_values = SortWrapper(next_entry, sort_keys, ascending)
                         heapq.heappush(pq, (sort_values, next_line, f))
 
                 # Close all file handles
@@ -441,11 +485,23 @@ class MyNoSQL:
 
         return final_output_files
 
-    def output_and_cleanup_all_tmp(self, tmp_files):
+    def load_json_file(self, file_path, collection):
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            for item in data:
+                self.insert(collection, item)
+
+    def output_and_cleanup_all_tmp(self, tmp_files, limit=100):
+        count = 0
         for file_path in tmp_files:
             with open(file_path, 'r') as f:
                 for line in f:
                     print(line.strip())
+                    count += 1
+                    if count >= limit:
+                        break
+            if count >= limit:
+                break
 
         # Remove all the file ends with .tmp
         all_files = os.listdir(self.db_directory)
@@ -475,9 +531,9 @@ if __name__ == '__main__':
     # test ordering
     # for i in range(100):
     #     db.insert('test_order', {'a' : {'a': i}})
-    # files = db.find('test_order')
-    # files = db.ordering(files, ["a.a"], ascending=False)
-    # db.output_and_cleanup_all_tmp(files)
+    files = db.find('test_order')
+    files = db.ordering(files, ["a.a"], ascending=False)
+    db.output_and_cleanup_all_tmp(files)
 
     # test join
     # for i in range(50):
