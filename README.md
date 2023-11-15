@@ -29,19 +29,28 @@
 
 ### example queries ###
 - query "get type, title from test"
-- query "find test that have a release_year of at most 2020"
+- query "get show_id,type,title,director,release_year,rating,duration from test"
+- query "find test that have a release_year of at most 2020" 
 - query "find test that have a release_year of at least 2020"
-- query "find test that release_year is 2020" # FIX
+- query "find test that release_year is 2020"
 - query "order test by release_year in descending order"
 - query "order test by release_year in ascending order"
-- query "find test that title is 2020" # FIX
+- query "find test that col_not_exist is 2020"
 - ...  
 - query "calculate the sum of release_year for test"
-- query "calculate the average of release_year for test" # FIX
+- query "calculate the average of release_year for test" 
 - query "group yt by Channel and calculate the sum of Likes"
-- query "group yt by Channel and calculate the average of Likes" # FIX
+- query "group yt by Channel and calculate the average of Likes"
 - query "combine rows from table1_name and table2_name where their col_name values match"   
-- query "insert s15, TV Show, Crime Stories: India Detectives, 2021, TV-MA, 1 Season, 161 min into test"
+- query "insert s23, Movie,Avvai Shanmughi, K.S. Ravikumar, 1996, TV-PG, 161 min into test"
 - query "delete from test where title = Falsa identidad"
 - query "update test set title = Dear Yellow People where title = Dear White People"
 - query "create table table_name (col1_name, col2_name)"
+
+
+### next steps ###
+- fix things
+- print df nicely
+- support inner join (need to prep csv files first)
+- support some boundary conditions & show in demo
+- use generator & support calling multiple queries in one line

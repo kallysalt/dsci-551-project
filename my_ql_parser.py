@@ -1,6 +1,11 @@
 import re
 
-def _to_number(value):
+class MyQLParser:
+    def __init__(self):
+        raise NotImplementedError("StaticClass cannot be instantiated")
+    
+    @staticmethod
+    def _to_number(value):
         try:
             return int(value)
         except ValueError:
@@ -8,10 +13,6 @@ def _to_number(value):
                 return float(value) 
             except ValueError:
                 raise ValueError(f"The value '{value}' is not a number.")
-
-class MyQLParser:
-    def __init__(self):
-        raise NotImplementedError("StaticClass cannot be instantiated")
 
     @staticmethod
     def parse_projection(query):
@@ -34,7 +35,8 @@ class MyQLParser:
             match = re.match(r"find (\w+) that have a (\w+) of at least (\d+)", query)
             if match:
                 table_name, col_name, value = match.groups()
-                value = _to_number(value)
+                # only valid for numeric values
+                value = MyQLParser._to_number(value)
                 return col_name, table_name, value, ">="
             else:
                 raise ValueError("Invalid filtering syntax")
@@ -42,7 +44,8 @@ class MyQLParser:
             match = re.match(r"find (\w+) that have a (\w+) of at most (\d+)", query)
             if match:
                 table_name, col_name, value = match.groups()
-                value = _to_number(value)
+                # only valid for numeric values
+                value = MyQLParser._to_number(value)
                 return col_name, table_name, value, "<="
             else:
                 raise ValueError("Invalid filtering syntax")
@@ -50,7 +53,7 @@ class MyQLParser:
             match = re.match(r"find (\w+) that (\w+) is (.+)", query)
             if match:
                 table_name, col_name, value = match.groups()
-                # value = _to_number(value)
+                # valid for both texts and numeric values
                 return col_name, table_name, value, "="
             else:
                 raise ValueError("Invalid filtering syntax")

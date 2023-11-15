@@ -6,19 +6,30 @@ import os
 import glob
 from tabulate import tabulate
 import json
-import typing
+import textwrap
 
 from my_ql_parser import MyQLParser
 
-memory_size = 512 # bytes
-
 class RelationalDB:
     def __init__(self):
-        pass
+        self.memory_size = 512 # bytes
     
+    # note: truncate if data string is too long 
     def _print_df(self, df, i):
         header = True if i == 0 else False
-        print(df.to_csv(index = False, header = header))
+        max_width = 25
+        df.isnull().any(axis=0)
+        formatters = {column: lambda x: f'{str(x)[:max_width]:<{max_width}}' for column in df.columns}
+        print(df.to_string(index = False, header = header, justify='left', formatters = formatters, na_rep=''))
+        
+    def _to_number(self, value):
+        try:
+            return int(value)
+        except ValueError:
+            try:
+                return float(value) 
+            except ValueError:
+                raise ValueError(f"The value '{value}' is not a number.")
     
     def _write_dict_to_file(self, data_dict, file_path):
         with open(file_path, 'w') as file:
@@ -35,7 +46,7 @@ class RelationalDB:
             value = row[col2_name]
             if calculation == 'sum':
                 aggregation_dict[key] = aggregation_dict.get(key, 0) + value
-            elif calculation == 'avg':
+            elif calculation == 'average':
                 if key in aggregation_dict:
                     sum_, count_ = aggregation_dict[key]
                     aggregation_dict[key] = (sum_ + value, count_ + 1)
@@ -149,7 +160,6 @@ class RelationalDB:
         else:
             raise ValueError("Unrecognized command")
     
-    # TODO: pretty print
     def projection(self, col_names, table_name):
         pattern = f'rdb/{table_name}_*.csv'
         files = glob.glob(pattern)
@@ -161,12 +171,10 @@ class RelationalDB:
             i = 0
             for file in files:
                 df = pd.read_csv(file, usecols = col_names)
-                tmp_fn = f"{file}.tmp"
-                df.to_csv(tmp_fn, index = False)
                 self._print_df(df, i)
-                os.remove(tmp_fn)
                 i += 1
               
+    # TODO: print sth if none can be found
     def filtering(self, col_name, table_name, value, criteria):
         pattern = f'rdb/{table_name}_*.csv'
         files = glob.glob(pattern)
@@ -178,13 +186,20 @@ class RelationalDB:
             i = 0
             for file in files:
                 df = pd.read_csv(file)
+                # check if col_name exists
+                if not col_name in df.columns:
+                    print(f"Error: Column {col_name} does not exist.")
+                    return
                 # create tmp file to store filtering results for each csv file
                 tmp_fn = f"{file}.tmp"
-                if criteria == '=': # can work wih string or numeric
-                    df = df[df[col_name] == value]
-                elif criteria == '>=': # can only work with numeric
+                if criteria == '=': # valid for both texts and numeric values
+                    if df[col_name].dtype != 'object':
+                        df = df[df[col_name] == self._to_number(value)]
+                    else:
+                        df = df[df[col_name] == value]
+                elif criteria == '>=': # only valid for numeric values
                     df = df[df[col_name] >= value]
-                elif criteria == '<=': # can only work with numeric
+                elif criteria == '<=': # only valid for numeric values
                     df = df[df[col_name] <= value]
                 if df.empty:
                     continue
@@ -211,11 +226,12 @@ class RelationalDB:
         pass 
 
     # TODO: max, min, count
+    # TODO: make sure to store dict as tmp files if dict size exceeds memory size
+    # TODO: check average calculation & limit precision, re-use aggregation function
     def grouping(self, table_name, col1_name, calculation, col2_name):
         # iterate thru all files
         # store aggregation result in a dictionary
         # if dictionary exceed memory size, store in tmp file
-        memory_size = 64
         pattern = f'rdb/{table_name}_*.csv'
         files = glob.glob(pattern)
         if not files:
@@ -227,7 +243,7 @@ class RelationalDB:
             df = pd.read_csv(file)
             new_aggregated_data = self._aggregate_data(df, col1_name, calculation, col2_name)
             # check the size of the aggregated data, if it exceeds memory size, write to temp file
-            if (sum([len(str(v)) for v in aggregated_data.values()]) + sum([len(str(v)) for v in new_aggregated_data.values()])) > memory_size:
+            if (sum([len(str(v)) for v in aggregated_data.values()]) + sum([len(str(v)) for v in new_aggregated_data.values()])) > self.memory_size:
                 tmp_file_path = f'rdb/{table_name}_temp_{len(tmp_files)}.json'
                 self._write_dict_to_file(aggregated_data, tmp_file_path)
                 tmp_files.append(tmp_file_path)
@@ -237,9 +253,9 @@ class RelationalDB:
                     if key in aggregated_data:
                         if calculation == 'sum':
                             aggregated_data[key] += value
-                        elif calculation == 'avg':
+                        elif calculation == 'average':
                             sum_, count_ = aggregated_data[key]
-                            aggregated_data[key] = (sum_ + value, count_ + 1)
+                            aggregated_data[key] = (sum_ + value[0], count_ + value[1])
                     else:
                         aggregated_data[key] = value
         # final aggregation from tmp files
@@ -249,20 +265,17 @@ class RelationalDB:
                 if key in aggregated_data:
                     if calculation == 'sum':
                         aggregated_data[key] += value
-                    elif calculation == 'avg':
+                    elif calculation == 'average':
                         sum_, count_ = aggregated_data[key]
                         aggregated_data[key] = (sum_ + value[0], count_ + value[1])
                 else:
                     aggregated_data[key] = value
-        # if calculation is 'avg', compute the final average
-        if calculation == 'avg':
+        # if calculation is 'average', compute the final average
+        if calculation == 'average':
             for key, (sum_, count_) in aggregated_data.items():
                 aggregated_data[key] = sum_ / count_
         # output the result
-        if calculation == 'avg':
-            for key in aggregated_data.keys():
-                sum_, count_ = aggregated_data[key]
-                aggregated_data[key] = sum_ / count_
+        if calculation == 'average':
             df_result = pd.DataFrame(list(aggregated_data.items()), columns=[col1_name, f'average_of_{col2_name}'])
         else:
             df_result = pd.DataFrame(list(aggregated_data.items()), columns=[col1_name, f'sum_of_{col2_name}'])
@@ -270,9 +283,10 @@ class RelationalDB:
         for tmp_file in tmp_files:
             os.remove(tmp_file)
         # print the result as a table
-        print(df_result.to_string(index=False))
+        print(df_result.to_string(index = False))
         
     # TODO: max, min
+    # TODO: check average calculation & limit precision
     def aggregation(self, type, col_name, table_name):
         try:
             pattern = f'rdb/{table_name}_*.csv'
@@ -285,19 +299,20 @@ class RelationalDB:
                 aggregated_count = 0
                 for file in files:
                     df = pd.read_csv(file)
+                    # TODO: check if this sum function is allowed
                     aggregated_value += df[col_name].sum()
-                    if type != 'avg':
-                        aggregated_count += len(df)
+                    if type != 'sum':
+                        aggregated_count += len(df[col_name])
                 # print aggregated value
                 if type == 'sum':
                     print(aggregated_value)
                 elif type == 'count':
                     print(aggregated_count)
-                elif type == 'avg' and aggregated_count == 0:
+                elif type == 'average' and aggregated_count == 0:
                     print(0)
-                elif type == 'avg' and aggregated_count > 0:
+                elif type == 'average' and aggregated_count > 0:
                     print(aggregated_value / aggregated_count)
-        except ValueError:
+        except Exception: # may be too general
             print(f"Error: Column {col_name} in table {table_name} contains non-numeric value.")
 
     # TODO: check for duplicates
@@ -321,7 +336,7 @@ class RelationalDB:
                 # check if it's ok to add a new record to this file
                 row_string = ','.join(str(value) for value in row_values)
                 total_bytes = os.path.getsize(last_file) + len(row_string.encode('utf-8'))
-                if total_bytes < memory_size:
+                if total_bytes < self.memory_size:
                     # write update to existing file
                     df.loc[len(df)] = row_values
                     df.to_csv(last_file, index = False)
