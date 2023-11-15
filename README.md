@@ -51,6 +51,7 @@
 ### next steps ###
 - support inner join (need to prep csv files first)
 - what happens if there exists null values (e.g. in calculations)
+- store chunk files in folders
 - use generator & support calling multiple queries in one line
 - support type check?
 - support insert new column?
