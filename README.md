@@ -49,8 +49,8 @@
 
 
 ### next steps ###
-- fix things
-- print df nicely
 - support inner join (need to prep csv files first)
-- support some boundary conditions & show in demo
+- what happens if there exists null values (e.g. in calculations)
 - use generator & support calling multiple queries in one line
+- support type check?
+- support insert new column?
