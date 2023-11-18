@@ -5,6 +5,7 @@ import os
 import glob
 import json
 import heapq
+import json
 
 from my_ql_parser import MyQLParser
 
@@ -57,14 +58,6 @@ class RelationalDB:
             except ValueError:
                 raise ValueError(f"Error: The value '{value}' is not a number.")
     
-    def _write_dict_to_file(self, data_dict, file):
-        with open(file, 'w') as file:
-            json.dump(data_dict, file)
-
-    def _read_dict_from_file(self, file):
-        with open(file, 'r') as file:
-            return json.load(file)
-        
     def _append_row(self, row_values, file):
         row_string = ','.join(str(value) for value in row_values)
         total_bytes = os.path.getsize(file) + len(row_string.encode('utf-8'))
@@ -108,7 +101,6 @@ class RelationalDB:
         #     df = pd.read_csv(file_path)
         #     df.to_csv(new_file, index = False)
         #     # delete old file
-            
             
     def _aggregate_data(self, df, col1_name, calculation, col2_name):
         aggregation_dict = {}
@@ -164,8 +156,8 @@ class RelationalDB:
         except ValueError:
             raise ValueError(f"Error: Column {col_name} contains non-numeric value.")
 
+    # TODO: what if cannot read all sorted files at once 
     # note: only support numeric values
-    # TODO: what if cannot read all sorted files at once
     def _k_way_merge(self, sorted_files, table_name, col_name, ascending):
         # initialize pq, file pointers, csv readers
         pq = []
@@ -200,7 +192,6 @@ class RelationalDB:
             fp.close()
         self._delete_files(sorted_files)
         return merged_files
-
     
     def query(self, args):
         if args:
@@ -209,7 +200,6 @@ class RelationalDB:
             self.parse_query(args) 
         else:
             print("No query provided")
-        
         
     def parse_query(self, query):
         if query.startswith("get"):
@@ -230,7 +220,7 @@ class RelationalDB:
             self._print_csv_files(tmp_files)
             self._delete_tmp_files()
 
-        # TODO
+        # note: no tmp files created
         elif query.startswith("group"):
             table_name, col1_name, calculation, col2_name = MyQLParser.parse_grouping(query)
             self.grouping(table_name, col1_name, calculation, col2_name)
@@ -331,49 +321,72 @@ class RelationalDB:
         pass 
     
     
-    # TODO
-    # MAYBE: handle null value
+    # okay to store aggregation result in json file?
     def grouping(self, table_name, col1_name, calculation, col2_name):
+        # write aggregation result for each group to one json file
         files = self._get_all_partition_paths(table_name)
-        aggregation_results = {}
         for file in files:
             df = pd.read_csv(file)
-            for _, row in df.iterrows():
+            for _, row in df.iterrows(): 
                 key = row[col1_name]
                 value = row[col2_name]
-                
-                # Check memory usage and write to temp file if needed
-                if sys.getsizeof(aggregation_results) > self.memory_limit:
-                    temp_file_name = f"temp_aggregation_{temp_file_index}.json"
-                    with open(temp_file_name, 'w') as temp_file:
-                        json.dump(aggregation_results, temp_file)
-                    aggregation_results.clear()
-                    temp_file_index += 1
-                    
+                # create key file if not exist
+                key_file = f"rdb/{table_name}/{key}.json"
+                if not os.path.isfile(key_file):
+                    with open(key_file, 'w') as f:
+                        data = { 'count': 0, 'sum': 0 }
+                        json.dump(data, f)
+                # perform aggregation    
                 if calculation == 'sum':
-                    aggregation_results[key] = aggregation_results.get(key, 0) + value
+                    # get current sum from key file
+                    with open(key_file, 'r') as f:
+                        data = json.load(f)
+                    with open(key_file, 'w') as f:    
+                        data['sum'] += value
+                        json.dump(data, f)
                 elif calculation == 'count':
-                    aggregation_results[key] = aggregation_results.get(key, 0) + 1
+                    with open(key_file, 'r') as f:
+                        data = json.load(f)
+                    with open(key_file, 'w') as f:  
+                        data['count'] += 1
+                        json.dump(data, f)
                 elif calculation == 'average':
-                    # For average, store a tuple of (sum, count)
-                    sum_, count_ = aggregation_results.get(key, (0, 0))
-                    aggregation_results[key] = (sum_ + value, count_ + 1)
-        
-                # check if the dictionary size exceeds memory size
-                # if so, write to a temporary file and clear the dictionary
-                # This part is not implemented here, but you would need to add this check
-
-        # Print or return the aggregation results
-        for key, value in aggregation_results.items():
-            if calculation == 'average':
-                # Compute the average
-                sum_, count_ = value
-                value = sum_ / count_ if count_ else 'Undefined'
-            print(f"{key}: {value}")
+                    with open(key_file, 'r') as f:
+                        data = json.load(f)
+                    with open(key_file, 'w') as f:  
+                        data['sum'] += value
+                        data['count'] += 1
+                        json.dump(data, f)
+        # print aggregation results
+        pattern = f'rdb/{table_name}/*.json'
+        json_files = glob.glob(pattern)
+        for key_file in json_files:
+            key = os.path.splitext(os.path.basename(key_file))[0]
+            if calculation == 'sum':
+                # print sum from key file
+                with open(key_file, 'r') as f:
+                    data = json.load(f)
+                    print(f'{key}: ', data['sum'])
+                # delete json file
+                os.remove(key_file)
+            elif calculation == 'count':
+                # print count from key file
+                with open(key_file, 'r') as f:
+                    data = json.load(f)
+                    print(f'{key}: ', data['count'])
+                # delete json file
+                os.remove(key_file)
+            elif calculation == 'average':
+                # calculate average from key file
+                with open(key_file, 'r') as f:
+                    data = json.load(f)
+                    avg = data['sum'] / data['count']
+                    print(f'{key}: ', f"{avg:.2f}")
+                # delete json file
+                os.remove(key_file)
 
         
     # MAYBE: max, min
-    # MAYBE: handle null value
     # completed
     def aggregation(self, calculation, col_name, table_name):
         files = self._get_all_partition_paths(table_name)

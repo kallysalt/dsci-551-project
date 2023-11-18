@@ -39,6 +39,7 @@
 - ...  
 - query "calculate the sum of release_year for test"
 - query "calculate the average of release_year for test" 
+- query "group tests by show_id and calculate the sum of test_aggr"
 - query "group machine_learning_youtube_videos by Channel and calculate the sum of Likes"
 - query "group machine_learning_youtube_videos by Channel and calculate the average of Likes"
 - query "combine rows from table1_name and table2_name where their col_name values match"   # TODO
@@ -51,7 +52,6 @@
 ### next steps ###
 - support inner join (need to prep csv files first)
 - support calling multiple queries in one line
-
 - add limit
 - link
 - update query language
