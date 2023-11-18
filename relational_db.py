@@ -41,7 +41,13 @@ class RelationalDB:
     def _delete_files(self, files):
         for file in files:
             os.remove(file)
-        
+    
+    def _delete_tmp_files(self):
+        pattern = f'rdb/*/*.tmp'
+        files = glob.glob(pattern)
+        for file in files:
+            os.remove(file)
+    
     def _to_number(self, value):
         try:
             return int(value)
@@ -51,14 +57,59 @@ class RelationalDB:
             except ValueError:
                 raise ValueError(f"Error: The value '{value}' is not a number.")
     
-    def _write_dict_to_file(self, data_dict, file_path):
-        with open(file_path, 'w') as file:
+    def _write_dict_to_file(self, data_dict, file):
+        with open(file, 'w') as file:
             json.dump(data_dict, file)
 
-    def _read_dict_from_file(self, file_path):
-        with open(file_path, 'r') as file:
+    def _read_dict_from_file(self, file):
+        with open(file, 'r') as file:
             return json.load(file)
-
+        
+    def _append_row(self, row_values, file):
+        row_string = ','.join(str(value) for value in row_values)
+        total_bytes = os.path.getsize(file) + len(row_string.encode('utf-8'))
+        # check if adding this row would exceed the max file size
+        if total_bytes > self.memory_limit:
+            # create a new file
+            suffix = file.split('.')[-1]
+            prefix = file.split('.')[0]
+            index = prefix.split('_')[-1]
+            prefix = prefix.split(index)[0]
+            new_file = f'{prefix}{int(index) + 1}.{suffix}'
+            with open(file, 'r') as f:
+                reader = csv.reader(f)
+                header = next(reader)  
+            with open(new_file, 'a', newline = '') as f:
+                writer = csv.writer(f)
+                writer.writerow(header)
+                writer.writerow(row_values)
+            file = new_file
+        else:
+            with open(file, 'a', newline = '') as f:
+                writer = csv.writer(f)
+                writer.writerow(row_values)
+        return file
+        
+        # # check if file size exceeds memory limit
+        
+        # # update records & write back to the file
+        # records.append(row_values)
+        # with open(file_path, mode='w', newline='') as file:
+        #     for record in records:
+        #         file.write(','.join(record) + '\n')
+        # # check if file size exceeds memory limit
+        # if os.path.getsize(file_path) > self.memory_limit:
+        #     # create a new csv file
+        #     table_name = os.path.splitext(os.path.basename(file_path))[0]
+        #     max_index = max([int(file.split('_')[-1].split('.csv')[0]) for file in self._get_all_partition_paths(table_name)])
+        #     max_index += 1
+        #     new_file = f'rdb/{table_name}/{table_name}_{max_index}.csv'
+        #     # set column names
+        #     df = pd.read_csv(file_path)
+        #     df.to_csv(new_file, index = False)
+        #     # delete old file
+            
+            
     def _aggregate_data(self, df, col1_name, calculation, col2_name):
         aggregation_dict = {}
         for _, row in df.iterrows():
@@ -85,6 +136,7 @@ class RelationalDB:
     def _sort_individual_files(self, table_name, col_name, ascending):
         pattern = f'rdb/{table_name}/{table_name}_*.csv'
         files = glob.glob(pattern)
+        files.sort()
         sorted_files = []
         for file in files:
             df = pd.read_csv(file)
@@ -94,9 +146,9 @@ class RelationalDB:
             # convert the sorted list of dictionaries back to a DataFrame
             df_sorted = pd.DataFrame(data_list)
             # saving the sorted DataFrame with a .tmp extension
-            tmp_file_path = file.replace('.csv', '.tmp')
-            df_sorted.to_csv(tmp_file_path, index = False)
-            sorted_files.append(tmp_file_path)
+            tmp_file = file.replace('.csv', '.tmp')
+            df_sorted.to_csv(tmp_file, index = False)
+            sorted_files.append(tmp_file)
         return sorted_files
     
     def _insert_into_pq(self, pq, reader, unique_id_counter, col_name, ascending):
@@ -119,36 +171,35 @@ class RelationalDB:
         pq = []
         unique_id_counter = 0
         file_pointers = [open(file, 'r') for file in sorted_files]
-        csv_readers = [csv.DictReader(fp) for fp in file_pointers]
-        
+        csv_readers = [csv.DictReader(fp) for fp in file_pointers] # okay?
+        merged_files = []
         # populate pq with the first row from each file
         for reader in csv_readers:
             self._insert_into_pq(pq, reader, unique_id_counter, col_name, ascending)
             unique_id_counter += 1  
-        
-       # write to merged file
-        merged_file = f'rdb/{table_name}/{table_name}_merged.tmp'
-        with open(merged_file, 'w', newline='') as f_out:
-            writer = None
-            while pq:
-                # pop smallest row from the heap
-                _, row, reader = heapq.heappop(pq)
-                # write the row to the output file
-                if writer is None:
-                    writer = csv.DictWriter(f_out, fieldnames = row.keys())
-                    writer.writeheader()
-                writer.writerow(row)
-                self._insert_into_pq(pq, reader, unique_id_counter, col_name, ascending)
-                unique_id_counter += 1  
-                
+        # create _merged_0.tmp file
+        current_file = f'rdb/{table_name}/{table_name}_merged_0.tmp'
+        # write column names to _merged_0.tmp file
+        col_names = csv_readers[0].fieldnames        
+        with open(current_file, 'w', newline = '') as f:
+            writer = csv.writer(f)
+            writer.writerow(col_names)
+        while pq:
+            # pop smallest row from the heap
+            _, row, reader = heapq.heappop(pq)
+            
+            # write the row to _merged_{n}.tmp file
+            new_file = self._append_row(row.values(), current_file)
+            if new_file != current_file:
+                merged_files.append(new_file)
+                current_file = new_file
+            self._insert_into_pq(pq, reader, unique_id_counter, col_name, ascending)
+            unique_id_counter += 1  
         # close file pointers and delete tmp files
         for fp in file_pointers:
             fp.close()
         self._delete_files(sorted_files)
-        # print and return the merged file
-        df = pd.read_csv(f'rdb/{table_name}/{table_name}_merged.tmp')
-        self._print_df(df, True)
-        return merged_file
+        return merged_files
 
     
     def query(self, args):
@@ -173,10 +224,11 @@ class RelationalDB:
             self._print_csv_files(tmp_files)
             self._delete_files(tmp_files)
             
-        # TODO
         elif query.startswith("order"):
             table_name, col_name, ascending = MyQLParser.parse_ordering(query)
-            self.ordering(table_name, col_name, ascending)
+            tmp_files = self.ordering(table_name, col_name, ascending)
+            self._print_csv_files(tmp_files)
+            self._delete_tmp_files()
 
         # TODO
         elif query.startswith("group"):
@@ -234,17 +286,19 @@ class RelationalDB:
             for file in files:
                 df = pd.read_csv(file)
                 # abort if col_name does not exist
-                if not col_name in df.columns:
+                if not col_name in df.columns: # okay to use df.columns?
                     print(f"Error: Column {col_name} does not exist.")
                     return tmp_files
                 # get filtered results for each csv file
                 if criteria == '=': 
-                    if df[col_name].dtype == 'object': # value is text
-                        df = df[df[col_name] == value]
-                    else: # value is numeric
+                    if df[col_name].dtype == 'object': 
+                        # value is text
+                        df = df[df[col_name] == value] # okay to use df[col_name] ?
+                    else: 
+                        # value is numeric
                         df = df[df[col_name] == self._to_number(value)]
                 elif criteria == '>=': 
-                    df = df[df[col_name] >= value] 
+                    df = df[df[col_name] >= value] # okay to use df[col_name] ?
                 elif criteria == '<=': 
                     df = df[df[col_name] <= value] 
                 # store filtered results in tmp file
@@ -258,7 +312,6 @@ class RelationalDB:
         return tmp_files        
 
 
-    # TODO
     # MAYBE: handle null value
     def ordering(self, table_name, col_name, ascending):
         files = self._get_all_partition_paths(table_name)
@@ -267,6 +320,7 @@ class RelationalDB:
             sorted_files = self._sort_individual_files(table_name, col_name, ascending)
             # perform external merge sort on sorted .tmp files
             merged_files = self._k_way_merge(sorted_files, table_name, col_name, ascending)
+        return merged_files
         
         
     # TODO
@@ -330,17 +384,17 @@ class RelationalDB:
                 for file in files:
                     df = pd.read_csv(file)
                     # abort if col_name does not exist
-                    if not col_name in df.columns:
+                    if not col_name in df.columns: # okay to use df.columns?
                         print(f"Error: Column {col_name} does not exist in table {table_name}.")
                         return
                     # calculate aggregated value
                     if calculation == 'count':
-                        aggregated_count += len(df[col_name]) # okay to use len?
+                        aggregated_count += len(df[col_name]) # okay to use df[col_name]?
                     elif calculation == 'sum':
                         for value in df[col_name]:
                             aggregated_value += value
                     elif calculation == 'average':
-                        aggregated_count += len(df[col_name]) # okay to use len?
+                        aggregated_count += len(df[col_name]) # okay to use df[col_name]?
                         for value in df[col_name]:
                             aggregated_value += value
                 # print aggregated value
@@ -363,29 +417,12 @@ class RelationalDB:
         if files:
             # check if record length is valid
             first_file_df = pd.read_csv(files[0])
-            if len(row_values) != len(first_file_df.columns):
+            if len(row_values) != len(first_file_df.columns): # okay to use df.columns?
                 print("Error: Invalid record length.")
             else:
                 # find the "last" csv file
-                max_index = max([int(file.split('_')[-1].split('.csv')[0]) for file in files])
-                last_file = files[-1]
-                df = pd.read_csv(last_file)
-                # check if it's ok to add a new record to this file
-                row_string = ','.join(str(value) for value in row_values)
-                total_bytes = os.path.getsize(last_file) + len(row_string.encode('utf-8'))
-                if total_bytes < self.memory_limit:
-                    # write update to existing file
-                    df.loc[len(df)] = row_values
-                    df.to_csv(last_file, index = False)
-                else:
-                    # create a new csv file
-                    max_index += 1
-                    new_file = f'rdb/{table_name}/{table_name}_{max_index}.csv'
-                    # set column names
-                    new_df = pd.DataFrame(columns = first_file_df.columns)
-                    # insert row
-                    new_df.loc[0] = row_values
-                    new_df.to_csv(new_file, index = False)
+                current_file = files[-1]
+                current_file = self._append_row(row_values, current_file)
                 print("Insert operation completed successfully.")
             
             
@@ -398,13 +435,13 @@ class RelationalDB:
             for file in files:
                 df = pd.read_csv(file)
                 # abort if col_name does not exist
-                if not col_name in df.columns:
+                if not col_name in df.columns:# okay to use df.columns?
                     print(f"Error: Column {col_name} does not exist in table {table_name}.")
                     return
                 # delete matching record(s)
                 if value in df[col_name].values:
                     found = True
-                    df = df[df[col_name] != value]
+                    df = df[df[col_name] != value] # okay to use !=?
                     df.to_csv(file, index = False)
             if found:
                 print("Delete operation completed successfully.")
@@ -415,7 +452,7 @@ class RelationalDB:
     # TODO: support delete (drop) entire table?
     
     
-    # completed
+    # TODO: replace is not allowed
     def update(self, table_name, col_name, new_value, old_value):
         files = self._get_all_partition_paths(table_name)
         if files:
@@ -423,13 +460,13 @@ class RelationalDB:
             for file in files:
                 df = pd.read_csv(file)
                 # abort if col_name does not exist
-                if not col_name in df.columns:
+                if not col_name in df.columns: # okay to use df.columns?
                     print(f"Error: Column {col_name} does not exist in table {table_name}.")
                     return
                 # update matching record(s)
-                if old_value in df[col_name].values:
+                if old_value in df[col_name].values: # okay to use df[col_name].values?
                     found = True
-                    df[col_name] = df[col_name].replace(old_value, new_value) # okay to use replace?
+                    df[col_name] = df[col_name].replace(old_value, new_value) # TODO
                     df.to_csv(file, index = False)
             if found:
                 print("Update operation completed successfully.")
@@ -445,7 +482,7 @@ class RelationalDB:
         else:
             os.mkdir(folder_name)
             fn = f'rdb/{table_name}/{table_name}_0.csv'
-            with open(fn, 'w', newline='') as file:
+            with open(fn, 'w', newline = '') as file:
                 writer = csv.writer(file)
                 writer.writerow(col_names)
             print(f"Table {table_name} created.")
