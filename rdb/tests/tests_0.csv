@@ -1,0 +1,9 @@
+show_id,type,title,director,release_year,rating,duration
+s1,Movie,Dick Johnson Is Dead,Kirsten Johnson,1998,PG-13,90 min
+s2,TV Show,Blood & Water,,2023,TV-MA,2 Seasons
+s3,TV Show,Ganglands,Julien Leclercq,1980,TV-MA,1 Season
+s4,TV Show,Jailbirds New Orleans,,1960,TV-MA,1 Season
+s5,TV Show,Kota Factory,,2021,TV-MA,2 Seasons
+s6,TV Show,Midnight Mass,Mike Flanagan,2022,TV-MA,1 Season
+s7,Movie,My Little Pony: A New Generation,"Robert Cullen, José Luis Ucha",2023,PG,91 min
+s8,Movie,Sankofa,Haile Gerima,1993,TV-MA,125 min

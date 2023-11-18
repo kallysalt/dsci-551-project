@@ -12,7 +12,7 @@ class MyQLParser:
             try:
                 return float(value) 
             except ValueError:
-                raise ValueError(f"The value '{value}' is not a number.")
+                raise(f"Error: The value '{value}' is not a number.")
 
     @staticmethod
     def parse_projection(query):

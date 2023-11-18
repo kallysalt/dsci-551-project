@@ -1,4 +1,6 @@
 import cmd
+import glob
+import os
 from relational_db import RelationalDB
 from json_db import JsonDB
 
@@ -35,6 +37,10 @@ class MyCLI(cmd.Cmd):
             else:
                 print("Please select a database first.")
         except ValueError as e:
+            # delete all tmp files
+            tmp_files = glob.glob('rdb/*.tmp')
+            for file in tmp_files:
+                os.remove(file)
             print(e)
 
     def do_exit(self, args):

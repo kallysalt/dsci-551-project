@@ -28,30 +28,30 @@
    
 
 ### example queries ###
-- query "get type, title from test"
-- query "get show_id,type,title,director,release_year,rating,duration from test"
-- query "find test that have a release_year of at most 2020" 
-- query "find test that have a release_year of at least 2020"
-- query "find test that release_year is 2020"
-- query "order test by release_year in descending order"
-- query "order test by release_year in ascending order"
-- query "find test that col_not_exist is 2020"
+- query "get type, title from tests"
+- query "find tests that have a release_year of at most 2020" 
+- query "find tests that have a release_year of at least 2020"
+- query "find tests that release_year is 2020"
+- query "find tests that director is Kirsten Johnson" #FIX
+- query "order tests by release_year in descending order" # FIX PRINT
+- query "order tests by release_year in ascending order" # FIX PRINT
+- query "find tests that col_not_exist is 2020"
 - ...  
 - query "calculate the sum of release_year for test"
 - query "calculate the average of release_year for test" 
-- query "group yt by Channel and calculate the sum of Likes"
-- query "group yt by Channel and calculate the average of Likes"
-- query "combine rows from table1_name and table2_name where their col_name values match"   
-- query "insert s23, Movie,Avvai Shanmughi, K.S. Ravikumar, 1996, TV-PG, 161 min into test"
-- query "delete from test where title = Falsa identidad"
-- query "update test set title = Dear Yellow People where title = Dear White People"
-- query "create table table_name (col1_name, col2_name)"
+- query "group machine_learning_youtube_videos by Channel and calculate the sum of Likes"
+- query "group machine_learning_youtube_videos by Channel and calculate the average of Likes"
+- query "combine rows from table1_name and table2_name where their col_name values match"   # TODO
+- query "insert s16, TV Show, Dear White People, , 2021, TV-MA, 4 Seasons into tests"
+- query "delete from tests where title = Falsa identidad"
+- query "update tests set title = Starling where title = The Starling"
+- query "create table demo (col1_name, col2_name)"
 
 
 ### next steps ###
 - support inner join (need to prep csv files first)
-- what happens if there exists null values (e.g. in calculations)
-- store chunk files in folders
-- use generator & support calling multiple queries in one line
-- support type check?
-- support insert new column?
+- support calling multiple queries in one line
+
+- add limit
+- link
+- update query language
