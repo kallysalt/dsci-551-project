@@ -157,7 +157,6 @@ class RelationalDB:
             raise ValueError(f"Error: Column {col_name} contains non-numeric value.")
 
     # TODO: what if cannot read all sorted files at once 
-    # note: only support numeric values
     def _k_way_merge(self, sorted_files, table_name, col_name, ascending):
         # initialize pq, file pointers, csv readers
         pq = []
@@ -259,7 +258,8 @@ class RelationalDB:
         files = self._get_all_partition_paths(table_name)
         if files:
             for file in files:
-                df = pd.read_csv(file, usecols = col_names) # okay to use usecols?
+                df = pd.read_csv(file)  # read the entire CSV file
+                df = df[col_names]  # select only the desired columns
                 # save result to tmp file
                 tmp_fn = file.replace('.csv', '.tmp')
                 df.to_csv(tmp_fn, index = False)
@@ -267,7 +267,6 @@ class RelationalDB:
         return tmp_files
                 
                 
-    # MAYBE: handle null value
     # completed
     def filtering(self, col_name, table_name, value, criteria):
         tmp_files = []
@@ -302,7 +301,8 @@ class RelationalDB:
         return tmp_files        
 
 
-    # MAYBE: handle null value
+    # completed for now (TODO: what can not read one row from all file chunks at once)
+    # note: only support numeric values
     def ordering(self, table_name, col_name, ascending):
         files = self._get_all_partition_paths(table_name)
         if files:
@@ -314,7 +314,6 @@ class RelationalDB:
         
         
     # TODO
-    # MAYBE: handle null value
     def inner_join(self, table1_name, table2_name, col_name):
         # fn = f'rdb/{table_name}_{n}.csv'
         # not sure how to implement
@@ -386,7 +385,6 @@ class RelationalDB:
                 os.remove(key_file)
 
         
-    # MAYBE: max, min
     # completed
     def aggregation(self, calculation, col_name, table_name):
         files = self._get_all_partition_paths(table_name)
