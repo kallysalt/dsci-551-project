@@ -8,17 +8,6 @@ except:
     from MyNoSQL import MyNoSQL
 
 
-'''
-INSERT INTO <collection> VALUES <document>
-
-Get FROM <collection> whose <query>
-
-UPDATE <collection> SET <new_values> whose <query>
-
-DELETE FROM <collection> whose <query>
-'''
-
-
 class MyJSONQLParser:
     def __init__(self, db: MyNoSQL):
         self.db = db
