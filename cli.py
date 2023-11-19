@@ -2,7 +2,6 @@ import cmd
 import glob
 import os
 from relational_db import RelationalDB
-from json_db import JsonDB
 
 from myNoSQL.MyJSONQLParser import MyJSONQLParser
 from myNoSQL.MyNoSQL import MyNoSQL

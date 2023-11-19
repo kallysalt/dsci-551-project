@@ -56,10 +56,10 @@ class MyNoSQL:
             os.makedirs(db_directory)
 
     def _safe_encode(self, text):
-        """Encode a string into a safe format for filenames using Base64."""
+        """Encode a string into a safe format for filenames using Base32."""
         if isinstance(text, str):
             text = text.encode('utf-8')
-        return base64.urlsafe_b64encode(text).decode('utf-8')
+        return base64.b32encode(text).decode('utf-8')
 
     def _generate_id(self):
         # Generate a unique identifier for a document
