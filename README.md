@@ -45,9 +45,10 @@
 - query "find netflix_originals that have a IMDB_Score of at least 6"
 - query "find netflix_originals that have a IMDB_Score of at least 6, limit 3"
 - query "find netflix_originals that Language is Japanese"
+- query "find netflix_originals that Language is Japanese, limit 3"
 - query "find netflix_originals that Genre is Korean" # error handling
 - query "find netflix_originals that Runtime is 120" 
-- query "find netflix_originals that Runtime is 120, limit 3" # FIX
+- query "find netflix_originals that Runtime is 120, limit 3"
 - ordering:
 - query "order netflix_originals by IMDB_Score in descending order" 
 - query "order netflix_originals by IMDB_Score in descending order, limit 100" 

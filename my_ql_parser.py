@@ -56,7 +56,7 @@ class MyQLParser:
             else:
                 raise ValueError("Invalid filtering syntax")
         elif " is " in query:
-            match = re.match(r"find (\w+) that (\w+) is ([\s\S]+)(?:, limit (\d+))?", query)
+            match = re.match(r"find (\w+) that (\w+) is ([\s\w]+)(?:, limit (\d+))?", query)
             if match:
                 table_name, col_name, value, limit = match.groups()
                 # valid for both texts and numeric values
