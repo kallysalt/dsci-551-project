@@ -58,18 +58,21 @@
 - aggregation:
 - query "give me the sum of Runtime for netflix_originals"
 - query "give me the average of Runtime for netflix_originals" 
-- query "give me the count of Title for netflix_originals" # ?
+- query "give me the count of Title for netflix_originals"
 - query "give me the sum of Genre for netflix_originals" # error handling
 - grouping:
 - query "group netflix_originals by Language and give me the sum of Runtime"
 - query "group netflix_originals by Language and give me the average of IMDB_Score"
-- query "group netflix_originals by Language and give me the count of Title" # ?
-- joining (inner join): # TODO: allow for matching of diff row names
+- query "group netflix_originals by Language and give me the count of Title"
+- joining (inner join): 
 - query "combine rows from netflix_originals and netflix_videos where their Title values match"
 - query "combine rows from netflix_originals and netflix_videos where their Title values match, limit 5"
 - query "combine rows from netflix_originals and netflix_videos where their Age values match" # error handling
 
 
 ### next steps ###
+- ppt
+- double check memory usage & legal use of panda/csv module
 - support calling multiple operations in one query
 - query "update netflix_originals set Title = Bright Forces where Title = Dark Forces" 
+- allow for matching diff row names in join
