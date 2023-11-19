@@ -2,6 +2,7 @@ import cmd
 import glob
 import os
 from relational_db import RelationalDB
+from json_db import JsonDB
 
 class MyCLI(cmd.Cmd):
     prompt = '(mycli) '

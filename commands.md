@@ -1,7 +1,7 @@
 #### Insert
 
 ```
-query "insert Fire in Paradise, Documentary, 39, 7.4, English into netflix_originals" # keep insert until new chunks get created
+query "insert Fire in Paradise, Documentary, 39, 7.4, English into netflix_originals"
 ```
 
 #### Delete
