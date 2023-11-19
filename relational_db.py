@@ -23,21 +23,34 @@ class RelationalDB:
         return files
     
     # note: truncate if data string is too long 
-    def _print_df(self, df, is_first_file):
+    # okay to use iloc?
+    def _print_df(self, df, is_first_file, cnt, limit):
         header = True if is_first_file else False
         max_width = 25
         df.isnull().any(axis = 0)
         formatters = {column: lambda x: f'{str(x)[:max_width]:<{max_width}}' for column in df.columns}
-        print(df.to_string(index = False, header = header, justify='left', formatters = formatters, na_rep=''))
+        if cnt + len(df) < limit:
+            print(df.to_string(index = False, header = header, justify='left', formatters = formatters, na_rep=''))
+            cnt += len(df)
+        else: # print till limit
+            rows_to_print = limit - cnt
+            # print only up to the `limit`
+            print(df.iloc[:rows_to_print].to_string(index=False, header=header, justify='left', formatters=formatters, na_rep=''))
+            cnt = limit  # Update cnt to the limit, since we've reached it
+        return cnt
         
-    # TODO: limit
-    def _print_csv_files(self, files):
+        
+    def _print_csv_files(self, files, limit = 15):
         is_first_file = True
+        cnt = 0
         if files:
             for file in files:
                 df = pd.read_csv(file)
-                self._print_df(df, is_first_file)
+                cnt = self._print_df(df, is_first_file, cnt, limit)
                 is_first_file = False
+                if cnt >= limit:
+                    return
+        
             
     def _delete_files(self, files):
         for file in files:
