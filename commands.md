@@ -103,8 +103,8 @@ load rdb/netflix_originals.csv
 #### Projection
 
 ```
-get Title, Genre, IMDB Score from netflix_originals (default: limit = 15)
-get Title, Genre, IMDB Score from netflix_originals, limit 3
+get Title, Genre, IMDB_Score from netflix_originals (default: limit = 15)
+get Title, Genre, IMDB_Score from netflix_originals, limit 3
 get Age from netflix_originals (error handling)
 ```
 
@@ -117,9 +117,9 @@ find netflix_originals that have a IMDB_Score of at least 6
 find netflix_originals that have a IMDB_Score of at least 6, limit 3
 find netflix_originals that Language is Japanese
 find netflix_originals that Language is Japanese, limit 3
-find netflix_originals that Genre is Korean (error handling)
 find netflix_originals that Runtime is 120 
 find netflix_originals that Runtime is 120, limit 3
+find netflix_originals that Genre is Korean (error handling)
 ```
 
 #### Ordering

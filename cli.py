@@ -1,7 +1,7 @@
 import cmd
 import glob
 import os
-from relational_db import RelationalDB
+from MyRQL import RelationalDB
 
 from myNoSQL.MyJSONQLParser import MyJSONQLParser
 from myNoSQL.MyNoSQL import MyNoSQL
@@ -61,6 +61,7 @@ class MyCLI(cmd.Cmd):
         try:
             self.__execute__(line)
         except Exception as e:
+            self._delete_tmp_files()
             print(f"Error: {e}")
 
 if __name__ == '__main__':
