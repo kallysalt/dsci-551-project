@@ -182,6 +182,7 @@ class RelationalDB:
         else:
             print("No query provided")
         
+        
     def parse_query(self, query):
         if query.startswith("get"):
             col_names, table_name = MyQLParser.parse_projection(query)
@@ -297,41 +298,45 @@ class RelationalDB:
         return merged_files
         
         
-    # TODO
     def inner_join(self, table1_name, table2_name, col_name):
-        joined_files = []
-        current_file = f"rdb/{table1_name}_joined_with_{table2_name}_0.tmp"
-        header_written = False
-        with open(current_file, 'w', newline = '') as f:
-            writer = csv.writer(f)
-        # Get all partition paths for table 1
-        for file1 in self._get_all_partition_paths(table1_name):
-            df1 = pd.read_csv(file1)
-            # Open table 2 and read line by line
-            for file2 in self._get_all_partition_paths(table2_name):
-                with open(file2, 'r') as f2:
-                    # Create a csv reader object
-                    reader2 = csv.DictReader(f2)
-                    for row in reader2:
-                        # Check if the value in col_name exists in df1
-                        if row[col_name] in df1[col_name].values:
-                            # Get all rows from df1 that match the current value
-                            matching_rows_df1 = df1[df1[col_name] == row[col_name]]
-                            # For each matching row, add the information from the second table's current row
-                            for _, matching_row in matching_rows_df1.iterrows():
-                                combined_row = {**matching_row.to_dict(), **row}
-                                row_values = list(combined_row.values())
-                                # write the header if not written yet
-                                if not header_written:
-                                    with open(current_file, 'w', newline='') as f:
-                                        writer = csv.writer(f)
-                                        writer.writerow(combined_row.keys())  # Writing the header
-                                        header_written = True
-                                # append row
-                                current_file = self._append_row(row_values, current_file)
-                                if current_file not in joined_files:
-                                    joined_files.append(current_file)
-        return joined_files
+        try:
+            # initialize variables
+            current_file = f"rdb/{table1_name}_joined_with_{table2_name}_0.tmp"
+            header_written = False
+            joined_files = []
+            # prepare for writing into current_filex
+            with open(current_file, 'w', newline = '') as cf:
+                writer = csv.writer(cf)
+            # load entire table 1 into memory
+            for file1 in self._get_all_partition_paths(table1_name):
+                df1 = pd.read_csv(file1)
+                # read table 2 line by line
+                for file2 in self._get_all_partition_paths(table2_name):
+                    with open(file2, 'r') as f2:
+                        reader2 = csv.DictReader(f2)
+                        for row in reader2:
+                            # check if the value in col_name exists in df1
+                            if row[col_name] in df1[col_name].values:
+                                # Get all rows from df1 that match the current value
+                                matching_rows_df1 = df1[df1[col_name] == row[col_name]]
+                                # For each matching row, add the information from the second table's current row
+                                for _, matching_row in matching_rows_df1.iterrows():
+                                    combined_row = {**matching_row.to_dict(), **row}
+                                    row_values = list(combined_row.values())
+                                    # write the header if not written yet
+                                    if not header_written:
+                                        with open(current_file, 'w', newline='') as f:
+                                            writer = csv.writer(f)
+                                            writer.writerow(combined_row.keys())  # Writing the header
+                                            header_written = True
+                                    # append row
+                                    current_file = self._append_row(row_values, current_file)
+                                    if current_file not in joined_files:
+                                        joined_files.append(current_file)
+            return joined_files
+        except KeyError:
+            print(f"Error: Column {col_name} does not exist in both tables.")
+            return []
     
     
     # okay to store aggregation result in json file?

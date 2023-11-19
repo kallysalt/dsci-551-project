@@ -43,6 +43,8 @@
 - query "group machine_learning_youtube_videos by Channel and calculate the sum of Likes"
 - query "group machine_learning_youtube_videos by Channel and calculate the average of Likes"
 - query "combine rows from tests_left and tests_right_partial where their show_id values match"
+- query "combine rows from tests_left and machine_learning_youtube_videos where their show_id values match" 
+- query "combine rows from tests_left and tests_right_partial where their hhh values match"
 - query "insert s16, TV Show, Dear White People, , 2021, TV-MA, 4 Seasons into tests"
 - query "delete from tests where title = Falsa identidad"
 - query "update tests set title = Bangkok where title = Bangkok Breaking"
