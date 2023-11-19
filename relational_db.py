@@ -23,7 +23,7 @@ class RelationalDB:
         return files
     
     # note: truncate if data string is too long 
-    # okay to use iloc?
+    # okay to use iloc here?
     def _print_df(self, df, is_first_file, cnt, limit):
         header = True if is_first_file else False
         max_width = 25
@@ -35,7 +35,7 @@ class RelationalDB:
         else: # print till limit
             rows_to_print = limit - cnt
             # print only up to the `limit`
-            print(df.iloc[:rows_to_print].to_string(index=False, header=header, justify='left', formatters=formatters, na_rep=''))
+            print(df.iloc[:rows_to_print].to_string(index = False, header = header, justify = 'left', formatters = formatters, na_rep = ''))
             cnt = limit  # Update cnt to the limit, since we've reached it
         return cnt
         
@@ -95,22 +95,6 @@ class RelationalDB:
                 writer = csv.writer(f)
                 writer.writerow(row_values)
         return file
-
-            
-    def _aggregate_data(self, df, col1_name, calculation, col2_name):
-        aggregation_dict = {}
-        for _, row in df.iterrows():
-            key = row[col1_name]
-            value = row[col2_name]
-            if calculation == 'sum':
-                aggregation_dict[key] = aggregation_dict.get(key, 0) + value
-            elif calculation == 'average':
-                if key in aggregation_dict:
-                    sum_, count_ = aggregation_dict[key]
-                    aggregation_dict[key] = (sum_ + value, count_ + 1)
-                else:
-                    aggregation_dict[key] = (value, 1)
-        return aggregation_dict
     
     def _bubble_sort(self, data_list, col_name, ascending):
         n = len(data_list)
@@ -121,9 +105,7 @@ class RelationalDB:
                     data_list[j], data_list[j+1] = data_list[j+1], data_list[j]
     
     def _sort_individual_files(self, table_name, col_name, ascending):
-        pattern = f'rdb/{table_name}/{table_name}_*.csv'
-        files = glob.glob(pattern)
-        files.sort()
+        files = self._get_all_partition_paths(table_name)
         sorted_files = []
         for file in files:
             df = pd.read_csv(file)
@@ -152,12 +134,13 @@ class RelationalDB:
             raise ValueError(f"Error: Column {col_name} contains non-numeric value.")
 
     # TODO: only read from k files at a time
+    # confirm with TA
     def _k_way_merge(self, sorted_files, table_name, col_name, ascending):
         # initialize pq, file pointers, csv readers
         pq = []
         unique_id_counter = 0
         file_pointers = [open(file, 'r') for file in sorted_files]
-        csv_readers = [csv.DictReader(fp) for fp in file_pointers] # okay?
+        csv_readers = [csv.DictReader(fp) for fp in file_pointers] # okay to use DictReader?
         merged_files = []
         # populate pq with the first row from each file
         for reader in csv_readers:
@@ -173,7 +156,6 @@ class RelationalDB:
         while pq:
             # pop smallest row from the heap
             _, row, reader = heapq.heappop(pq)
-            
             # write the row to _merged_{n}.tmp file
             new_file = self._append_row(row.values(), current_file)
             if new_file != current_file:
@@ -187,6 +169,7 @@ class RelationalDB:
         self._delete_files(sorted_files)
         return merged_files
     
+    
     def query(self, args):
         if args:
             if args[0] == "\"" and args[-1] == "\"":
@@ -198,36 +181,48 @@ class RelationalDB:
         
     def parse_query(self, query):
         if query.startswith("get"):
-            col_names, table_name = MyQLParser.parse_projection(query)
+            col_names, table_name, limit = MyQLParser.parse_projection(query)
             tmp_files = self.projection(col_names, table_name)
-            self._print_csv_files(tmp_files)
+            if limit:
+                self._print_csv_files(tmp_files, limit)
+            else:
+                self._print_csv_files(tmp_files)
             self._delete_files(tmp_files)
             
         elif query.startswith("find"):
-            col_name, table_name, value, criteria = MyQLParser.parse_filtering(query)
+            col_name, table_name, value, criteria, limit = MyQLParser.parse_filtering(query)
             tmp_files = self.filtering(col_name, table_name, value, criteria)
-            self._print_csv_files(tmp_files)
+            if limit:
+                self._print_csv_files(tmp_files, limit)
+            else:
+                self._print_csv_files(tmp_files)
             self._delete_files(tmp_files)
             
         elif query.startswith("order"):
-            table_name, col_name, ascending = MyQLParser.parse_ordering(query)
+            table_name, col_name, ascending, limit = MyQLParser.parse_ordering(query)
             tmp_files = self.ordering(table_name, col_name, ascending)
-            self._print_csv_files(tmp_files)
+            if limit:
+                self._print_csv_files(tmp_files, limit)
+            else:
+                self._print_csv_files(tmp_files)
             self._delete_tmp_files()
 
-        # note: no tmp files created
+        # limit not implemented
         elif query.startswith("group"):
             table_name, col1_name, calculation, col2_name = MyQLParser.parse_grouping(query)
             self.grouping(table_name, col1_name, calculation, col2_name)
             
-        elif query.startswith("calculate"):
+        elif query.startswith("give me"):
             calculation, col_name, table_name = MyQLParser.parse_aggregation(query)
             self.aggregation(calculation, col_name, table_name)
         
         elif query.startswith("combine"):
-            table1_name, table2_name, col_name = MyQLParser.parse_inner_join(query)
+            table1_name, table2_name, col_name, limit = MyQLParser.parse_inner_join(query)
             tmp_files = self.inner_join(table1_name, table2_name, col_name)
-            self._print_csv_files(tmp_files)
+            if limit:
+                self._print_csv_files(tmp_files, limit)
+            else:
+                self._print_csv_files(tmp_files)
             self._delete_files(tmp_files)
         
         elif query.startswith("insert"):
@@ -245,12 +240,17 @@ class RelationalDB:
         elif query.startswith("create"):
             table_name, col_names = MyQLParser.parse_create(query)
             self.create(table_name, col_names)
+            
+        elif query.startswith("load"):
+            file_path = MyQLParser.parse_load(query)
+            self.load_large_csv_file(file_path)
         
         else:
             raise ValueError("Unrecognized command")
     
     
     # completed
+    # okay to use df[col_names]?
     def projection(self, col_names, table_name):
         tmp_files = []
         files = self._get_all_partition_paths(table_name)
@@ -299,7 +299,7 @@ class RelationalDB:
         return tmp_files        
 
 
-    # completed for now (TODO: what can not read one row from all file chunks at once)
+    # completed for now (TODO: what if we can not read one row from all file chunks at once)
     # note: only support numeric values
     def ordering(self, table_name, col_name, ascending):
         files = self._get_all_partition_paths(table_name)
@@ -326,11 +326,11 @@ class RelationalDB:
                 # read table 2 line by line
                 for file2 in self._get_all_partition_paths(table2_name):
                     with open(file2, 'r') as f2:
-                        reader2 = csv.DictReader(f2)
+                        reader2 = csv.DictReader(f2) # an iterator that processes the file line by line
                         for row in reader2:
                             # check if the value in col_name exists in df1
                             if row[col_name] in df1[col_name].values:
-                                # Get all rows from df1 that match the current value
+                                # get all rows from df1 that match the current value
                                 matching_rows_df1 = df1[df1[col_name] == row[col_name]]
                                 # For each matching row, add the information from the second table's current row
                                 for _, matching_row in matching_rows_df1.iterrows():
@@ -355,66 +355,71 @@ class RelationalDB:
     # okay to store aggregation result in json file?
     def grouping(self, table_name, col1_name, calculation, col2_name):
         # write aggregation result for each group to one json file
-        files = self._get_all_partition_paths(table_name)
-        for file in files:
-            df = pd.read_csv(file)
-            for _, row in df.iterrows(): 
-                key = row[col1_name]
-                value = row[col2_name]
-                # create key file if not exist
-                key_file = f"rdb/{table_name}/{key}.json"
-                if not os.path.isfile(key_file):
-                    with open(key_file, 'w') as f:
-                        data = { 'count': 0, 'sum': 0 }
-                        json.dump(data, f)
-                # perform aggregation    
+        try:
+            files = self._get_all_partition_paths(table_name)
+            for file in files:
+                df = pd.read_csv(file)
+                for _, row in df.iterrows(): 
+                    key = row[col1_name]
+                    value = row[col2_name]
+                    # create key file if not exist
+                    key_file = f"rdb/{table_name}/{key}.json"
+                    if not os.path.isfile(key_file):
+                        with open(key_file, 'w') as f:
+                            data = { 'count': 0, 'sum': 0 }
+                            json.dump(data, f)
+                    # perform aggregation    
+                    if calculation == 'sum':
+                        # get current sum from key file
+                        with open(key_file, 'r') as f:
+                            data = json.load(f)
+                        with open(key_file, 'w') as f:    
+                            data['sum'] += value
+                            json.dump(data, f)
+                    elif calculation == 'count':
+                        with open(key_file, 'r') as f:
+                            data = json.load(f)
+                        with open(key_file, 'w') as f:  
+                            data['count'] += 1
+                            json.dump(data, f)
+                    elif calculation == 'average':
+                        with open(key_file, 'r') as f:
+                            data = json.load(f)
+                        with open(key_file, 'w') as f:  
+                            data['sum'] += value
+                            data['count'] += 1
+                            json.dump(data, f)
+            # print aggregation results
+            pattern = f'rdb/{table_name}/*.json'
+            key_files = glob.glob(pattern)
+            for key_file in key_files:
+                key = os.path.splitext(os.path.basename(key_file))[0]
                 if calculation == 'sum':
-                    # get current sum from key file
+                    # print sum from key file
                     with open(key_file, 'r') as f:
                         data = json.load(f)
-                    with open(key_file, 'w') as f:    
-                        data['sum'] += value
-                        json.dump(data, f)
+                        print(f'{key}: ', data['sum'])
+                    # delete json file
+                    os.remove(key_file)
                 elif calculation == 'count':
+                    # print count from key file
                     with open(key_file, 'r') as f:
                         data = json.load(f)
-                    with open(key_file, 'w') as f:  
-                        data['count'] += 1
-                        json.dump(data, f)
+                        print(f'{key}: ', data['count'])
+                    # delete json file
+                    os.remove(key_file)
                 elif calculation == 'average':
+                    # calculate average from key file
                     with open(key_file, 'r') as f:
                         data = json.load(f)
-                    with open(key_file, 'w') as f:  
-                        data['sum'] += value
-                        data['count'] += 1
-                        json.dump(data, f)
-        # print aggregation results
-        pattern = f'rdb/{table_name}/*.json'
-        json_files = glob.glob(pattern)
-        for key_file in json_files:
-            key = os.path.splitext(os.path.basename(key_file))[0]
-            if calculation == 'sum':
-                # print sum from key file
-                with open(key_file, 'r') as f:
-                    data = json.load(f)
-                    print(f'{key}: ', data['sum'])
-                # delete json file
-                os.remove(key_file)
-            elif calculation == 'count':
-                # print count from key file
-                with open(key_file, 'r') as f:
-                    data = json.load(f)
-                    print(f'{key}: ', data['count'])
-                # delete json file
-                os.remove(key_file)
-            elif calculation == 'average':
-                # calculate average from key file
-                with open(key_file, 'r') as f:
-                    data = json.load(f)
-                    avg = data['sum'] / data['count']
-                    print(f'{key}: ', f"{avg:.2f}")
-                # delete json file
-                os.remove(key_file)
+                        avg = data['sum'] / data['count']
+                        print(f'{key}: ', f"{avg:.2f}")
+                    # delete json file
+                    os.remove(key_file)
+        except KeyError as e:
+            print(f"Error: Column {col1_name} or {col2_name} does not exist in table {table_name}.")
+        except ValueError:
+            print(f"Error: Column {col2_name} contains non-numeric value.")
 
         
     # completed
@@ -484,7 +489,7 @@ class RelationalDB:
                 # delete matching record(s)
                 if value in df[col_name].values:
                     found = True
-                    df = df[df[col_name] != value] # okay to use !=?
+                    df = df[df[col_name] != value] # okay to use df[col_name]?
                     df.to_csv(file, index = False)
             if found:
                 print("Delete operation completed successfully.")
@@ -492,10 +497,10 @@ class RelationalDB:
                 print("No matching record found.")
                 
     
-    # TODO: support delete (drop) entire table?
+    # support delete (drop) entire table?
     
-    
-    # okay to use df.loc?
+
+    # okay to use df.loc here?
     def update(self, table_name, col_name, new_value, old_value):
         files = self._get_all_partition_paths(table_name)
         if files:
@@ -532,7 +537,6 @@ class RelationalDB:
             print(f"Table {table_name} created.")
             
     
-    # TODO: add to db parser
     # split a csv file into chunks within memory limit
     def load_large_csv_file(self, file_path):
         table_name = os.path.splitext(os.path.basename(file_path))[0]

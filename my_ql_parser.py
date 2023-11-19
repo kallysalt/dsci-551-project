@@ -17,44 +17,51 @@ class MyQLParser:
     @staticmethod
     def parse_projection(query):
         '''get [col1_name, col2_name, col3_name, ...] from [table_name]'''
-        match = re.match(r"get ([\w\, ]+) from (\w+)", query)
+        '''get [col1_name, col2_name, col3_name, ...] from [table_name], limit [n]'''
+        match = re.match(r"get ([\w\s,]+) from (\w+)(?:, limit (\d+))?", query)
         if match:
-            col_names, table_name = match.groups()
+            col_names, table_name, limit = match.groups()
             col_names = col_names.split(',') 
             for i in range(len(col_names)):
                 col_names[i] = col_names[i].strip()
-            return col_names, table_name
+            limit = int(limit) if limit else None
+            return col_names, table_name, limit
         else:
             raise ValueError("Invalid projection syntax")
 
     @staticmethod
     def parse_filtering(query):
         '''find [table_name] that have a [col] of at [least / most] [numeric_value]'''
+        '''find [table_name] that have a [col] of at [least / most] [numeric_value], limit [n]'''
         '''find [table] that [col] is [value]'''
+        '''find [table] that [col] is [value], limit [n]'''
         if "of at least" in query:
-            match = re.match(r"find (\w+) that have a (\w+) of at least (\d+)", query)
+            match = re.match(r"find (\w+) that have a (\w+) of at least (\d+)(?:, limit (\d+))?", query)
             if match:
-                table_name, col_name, value = match.groups()
+                table_name, col_name, value, limit = match.groups()
                 # only valid for numeric values
                 value = MyQLParser._to_number(value)
-                return col_name, table_name, value, ">="
+                limit = int(limit) if limit else None
+                return col_name, table_name, value, ">=", limit
             else:
                 raise ValueError("Invalid filtering syntax")
         elif "of at most" in query:
-            match = re.match(r"find (\w+) that have a (\w+) of at most (\d+)", query)
+            match = re.match(r"find (\w+) that have a (\w+) of at most (\d+)(?:, limit (\d+))?", query)
             if match:
-                table_name, col_name, value = match.groups()
+                table_name, col_name, value, limit = match.groups()
                 # only valid for numeric values
                 value = MyQLParser._to_number(value)
-                return col_name, table_name, value, "<="
+                limit = int(limit) if limit else None
+                return col_name, table_name, value, "<=", limit
             else:
                 raise ValueError("Invalid filtering syntax")
         elif " is " in query:
-            match = re.match(r"find (\w+) that (\w+) is (.+)", query)
+            match = re.match(r"find (\w+) that (\w+) is ([\s\S]+)(?:, limit (\d+))?", query)
             if match:
-                table_name, col_name, value = match.groups()
+                table_name, col_name, value, limit = match.groups()
                 # valid for both texts and numeric values
-                return col_name, table_name, value, "="
+                limit = int(limit) if limit else None
+                return col_name, table_name, value, "=", limit
             else:
                 raise ValueError("Invalid filtering syntax")
         else:
@@ -63,15 +70,18 @@ class MyQLParser:
     @staticmethod
     def parse_ordering(query):
         '''order [table_name] by [col] in [descending / ascending] order'''
-        match = re.match(r"order (\w+) by (\w+) in (descending|ascending) order", query)
+        '''order [table_name] by [col] in [descending / ascending] order, limit [n]'''
+        match = re.match(r"order (\w+) by (\w+) in (descending|ascending) order(?:, limit (\d+))?", query)
         if match:
-            table_name, col_name, order = match.groups()
+            table_name, col_name, order, limit = match.groups()
             asecending = order == "ascending"
-            return table_name, col_name, asecending
+            limit = int(limit) if limit else None
+            return table_name, col_name, asecending, limit
         else:
             raise ValueError("Invalid ordering syntax")
-        
+
     @staticmethod
+    # limit not implemented
     def parse_grouping(query):
         '''group [table_name] by [col1_name] and calculate the [sum / average] of [col2_name]'''
         match = re.match(r"group (\w+) by (\w+) and calculate the (sum|average) of (\w+)", query)
@@ -83,9 +93,9 @@ class MyQLParser:
     
     @staticmethod
     def parse_aggregation(query):
-        '''calculate the [sum / average ] of [col_name] for [table_name]'''
+        '''give me the [sum / average ] of [col_name] for [table_name]'''
         # TODO: add parser for count
-        match = re.match(r"calculate the (sum|average) of (\w+) for (\w+)", query)
+        match = re.match(r"give me the (sum|average|count) of (\w+) for (\w+)", query)
         if match:
             type, col_name, table_name = match.groups()
             return type, col_name, table_name
@@ -95,12 +105,14 @@ class MyQLParser:
     @staticmethod
     def parse_inner_join(query):
         '''combine rows from [table1_name] and [table2_name] where their [col] values match'''
-        match = re.match(r"combine rows from (\w+) and (\w+) where their (\w+) values match", query)
+        '''combine rows from [table1_name] and [table2_name] where their [col] values match, limit [n]'''
+        match = re.match(r"combine rows from (\w+) and (\w+) where their (\w+) values match(?:, limit (\d+))?", query)
         if match:
-            table1_name, table2_name, col_name = match.groups()
-            return table1_name, table2_name, col_name
+            table1_name, table2_name, col_name, limit = match.groups()
+            limit = int(limit) if limit else None  # Convert limit to integer if present
+            return table1_name, table2_name, col_name, limit
         else:
-            raise ValueError("Invalid inner join syntax")
+            raise ValueError("Invalid insert syntax")
     
     @staticmethod
     def parse_insert(query):
@@ -145,3 +157,14 @@ class MyQLParser:
             return table_name, col_names
         else:
             raise ValueError("Invalid create table syntax")
+        
+    
+    @staticmethod
+    def parse_load(query):
+        '''load [file_path]'''
+        match = re.match(r"load ([^\s]+)", query)
+        if match:
+            (file_path,) = match.groups()
+            return file_path
+        else:
+            raise ValueError("Invalid load syntax")

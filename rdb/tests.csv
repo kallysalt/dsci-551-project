@@ -1,24 +1,24 @@
-show_id,type,release_year,rating,duration
-s1,Movie,2020,PG-13,90 min
-s2,TV Show,2021,TV-MA,2 Seasons
-s3,TV Show,2021,TV-MA,1 Season
-s4,TV Show,2021,TV-MA,1 Season
-s5,TV Show,2021,TV-MA,2 Seasons
-s6,TV Show,2021,TV-MA,1 Season
-s7,Movie,2021,PG,91 min
-s8,Movie,1993,TV-MA,125 min
-s9,TV Show,2021,TV-14,9 Seasons
-s10,Movie,2021,PG-13,104 min
-s11,TV Show,2021,TV-MA,1 Season
-s12,TV Show,2021,TV-MA,1 Season
-s13,Movie,2021,TV-MA,127 min
-s14,Movie,2021,TV-PG,91 min
-s15,TV Show,2021,TV-MA,1 Season
-s16,TV Show,2021,TV-MA,4 Seasons
-s17,Movie,2020,TV-MA,67 min
-s18,TV Show,2020,TV-MA,2 Seasons
-s19,Movie,2021,TV-14,94 min
-s20,TV Show,2021,TV-MA,1 Season
-s21,TV Show,2021,TV-14,1 Season
-s22,TV Show,2018,TV-14,5 Seasons
-s23,Movie,1996,TV-PG,161 min
+show_id,type,title,director,release_year,rating,duration
+s1,Movie,Dick Johnson Is Dead,Kirsten Johnson,2020,PG-13,90 min
+s2,TV Show,Blood & Water,,2021,TV-MA,2 Seasons
+s3,TV Show,Ganglands,Julien Leclercq,2021,TV-MA,1 Season
+s4,TV Show,Jailbirds New Orleans,,2021,TV-MA,1 Season
+s5,TV Show,Kota Factory,,2021,TV-MA,2 Seasons
+s6,TV Show,Midnight Mass,Mike Flanagan,2021,TV-MA,1 Season
+s7,Movie,My Little Pony: A New Generation,"Robert Cullen, José Luis Ucha",2021,PG,91 min
+s8,Movie,Sankofa,Haile Gerima,1993,TV-MA,125 min
+s9,TV Show,The Great British Baking Show,Andy Devonshire,2021,TV-14,9 Seasons
+s10,Movie,The Starling,Theodore Melfi,2021,PG-13,104 min
+s11,TV Show,"Vendetta: Truth, Lies and The Mafia",,2021,TV-MA,1 Season
+s12,TV Show,Bangkok Breaking,Kongkiat Komesiri,2021,TV-MA,1 Season
+s13,Movie,Je Suis Karl,Christian Schwochow,2021,TV-MA,127 min
+s14,Movie,Confessions of an Invisible Girl,Bruno Garotti,2021,TV-PG,91 min
+s15,TV Show,Crime Stories: India Detectives,,2021,TV-MA,1 Season
+s16,TV Show,Dear White People,,2021,TV-MA,4 Seasons
+s17,Movie,Europe's Most Dangerous Man: Otto Skorzeny in Spain,"Pedro de Echave García, Pablo Azorín Williams",2020,TV-MA,67 min
+s18,TV Show,Falsa identidad,,2020,TV-MA,2 Seasons
+s19,Movie,Intrusion,Adam Salky,2021,TV-14,94 min
+s20,TV Show,Jaguar,,2021,TV-MA,1 Season
+s21,TV Show,Monsters Inside: The 24 Faces of Billy Milligan,Olivier Megaton,2021,TV-14,1 Season
+s22,TV Show,Resurrection: Ertugrul,,2018,TV-14,5 Seasons
+s23,Movie,Avvai Shanmughi,K.S. Ravikumar,1996,TV-PG,161 min
