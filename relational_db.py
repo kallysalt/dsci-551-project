@@ -153,7 +153,6 @@ class RelationalDB:
         while pq:
             # pop smallest row from the heap and append to _merged_{n}.tmp file 
             _, row, reader = heapq.heappop(pq)
-            # write the row to
             new_file = self._append_row(row.values(), current_file)
             if new_file != current_file:
                 merged_files.append(new_file)
@@ -246,7 +245,6 @@ class RelationalDB:
             raise ValueError("Unrecognized command")
     
     
-    # completed
     # okay to use df[col_names]?
     def projection(self, col_names, table_name):
         try:
@@ -266,7 +264,6 @@ class RelationalDB:
             return []
                 
                 
-    # completed
     def filtering(self, col_name, table_name, value, criteria):
         try:
             tmp_files = []
@@ -431,7 +428,6 @@ class RelationalDB:
             print(f"Error: Column {col2_name} contains non-numeric value.")
 
         
-    # completed
     def aggregation(self, calculation, col_name, table_name):
         try:
             files = self._get_all_partition_paths(table_name)
@@ -471,7 +467,6 @@ class RelationalDB:
             print(f"Error: Column {col_name} does not exist in table {table_name}.")
 
 
-    # completed
     def insert(self, row_values, table_name):
         files = self._get_all_partition_paths(table_name)
         if files:
@@ -486,7 +481,6 @@ class RelationalDB:
                 print("Insert operation completed successfully.")
             
             
-    # completed
     # note: does not delete file if no more rows left
     def delete(self, table_name, col_name, value):
         files = self._get_all_partition_paths(table_name)
@@ -535,7 +529,6 @@ class RelationalDB:
                 print("No matching record found.")
 
 
-    # completed
     def create(self, table_name, col_names):
         folder_name = fn = f'rdb/{table_name}'
         if os.path.isdir(folder_name):
