@@ -4,61 +4,18 @@
 - Design a query language like human conversations with some keywords and map them to process the query using programming languages
 - You cannot use any of the existing databases like firebase, sql, etc to store data
 
-   
+
 ### assumptions ###   
 - queries are case sensitive
 - memory size > reading one line from each chunk file
 
-   
-### demo queries ###
-#### data manipulation ####
-- query "insert Fire in Paradise, Documentary, 39, 7.4, English into netflix_originals" # keep insert until new chunks get created
-- query "delete from netflix_originals where Title = Fire in Paradise"
-- query "update netflix_originals set Title = Bright Forces where Title = Dark Forces" 
-- query "create table demo (col1_name, col2_name)"
-#### data retrieval ####
-- query "load rdb/netflix_originals.csv"
-- projection:
-- query "get Title, Genre, IMDB Score from netflix_originals" # default: limit = 15
-- query "get Title, Genre, IMDB Score from netflix_originals, limit 3"
-- query "get Age from netflix_originals" # error handling
-#### filtering ####
-- query "find netflix_originals that have a IMDB_Score of at most 3" 
-- query "find netflix_originals that have a IMDB_Score of at most 5, limit 3" 
-- query "find netflix_originals that have a IMDB_Score of at least 6"
-- query "find netflix_originals that have a IMDB_Score of at least 6, limit 3"
-- query "find netflix_originals that Language is Japanese"
-- query "find netflix_originals that Language is Japanese, limit 3"
-- query "find netflix_originals that Genre is Korean" # error handling
-- query "find netflix_originals that Runtime is 120" 
-- query "find netflix_originals that Runtime is 120, limit 3"
-#### ordering ####
-- query "order netflix_originals by IMDB_Score in descending order" 
-- query "order netflix_originals by IMDB_Score in descending order, limit 100" 
-- query "order netflix_originals by IMDB_Score in ascending order"  
-- query "order netflix_originals by IMDB_Score in ascending order, limit 100"  
-- query "order netflix_originals by Age in ascending order"  # error handling
-#### aggregation ####
-- query "give me the sum of Runtime for netflix_originals"
-- query "give me the average of Runtime for netflix_originals" 
-- query "give me the count of Title for netflix_originals"
-- query "give me the sum of Genre for netflix_originals" # error handling
-#### grouping ####
-- query "group netflix_originals by Language and give me the sum of Runtime"
-- query "group netflix_originals by Language and give me the average of IMDB_Score"
-- query "group netflix_originals by Language and give me the count of Title"
-- joining (inner join): 
-- query "combine rows from netflix_originals and netflix_videos where their Title values match"
-- query "combine rows from netflix_originals and netflix_videos where their Title values match, limit 5"
-- query "combine rows from netflix_originals and netflix_videos where their Age values match" # error handling
-
 
 ### next steps ###
 - ppt
-- double check memory usage & legal use of panda/csv module
-- support calling multiple operations in one query
-- query "update netflix_originals set Title = Bright Forces where Title = Dark Forces" 
-- allow for matching diff row names in join
+- memory usage (especially k-way merge) & legal use of panda/csv module
+- (support calling multiple operations in one query)
+- (query "update netflix_originals set Title = Bright Forces where Title = Dark Forces") 
+- (allow for matching diff row names in join)
 
 
 ### query language for relational db (outdated) ###
