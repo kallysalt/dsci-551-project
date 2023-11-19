@@ -11,7 +11,7 @@ from my_ql_parser import MyQLParser
 
 class RelationalDB:
     def __init__(self):
-        self.memory_limit = 512 # bytes
+        self.memory_limit = 4096 # bytes
         
     # note: sorted by file name
     def _get_all_partition_paths(self, table_name):
@@ -252,63 +252,75 @@ class RelationalDB:
     # completed
     # okay to use df[col_names]?
     def projection(self, col_names, table_name):
-        tmp_files = []
-        files = self._get_all_partition_paths(table_name)
-        if files:
-            for file in files:
-                df = pd.read_csv(file)  # read the entire CSV file
-                df = df[col_names]  # select only the desired columns
-                # save result to tmp file
-                tmp_fn = file.replace('.csv', '.tmp')
-                df.to_csv(tmp_fn, index = False)
-                tmp_files.append(tmp_fn)
-        return tmp_files
+        try:
+            tmp_files = []
+            files = self._get_all_partition_paths(table_name)
+            if files:
+                for file in files:
+                    df = pd.read_csv(file)  # read the entire CSV file
+                    df = df[col_names]  # select only the desired columns
+                    # save result to tmp file
+                    tmp_fn = file.replace('.csv', '.tmp')
+                    df.to_csv(tmp_fn, index = False)
+                    tmp_files.append(tmp_fn)
+            return tmp_files
+        except KeyError:
+            print(f"Error: Column {col_names} does not exist in table {table_name}.")
+            return []
                 
                 
     # completed
     def filtering(self, col_name, table_name, value, criteria):
-        tmp_files = []
-        files = self._get_all_partition_paths(table_name)
-        if files:
-            for file in files:
-                df = pd.read_csv(file)
-                # abort if col_name does not exist
-                if not col_name in df.columns: # okay to use df.columns?
-                    print(f"Error: Column {col_name} does not exist.")
-                    return tmp_files
-                # get filtered results for each csv file
-                if criteria == '=': 
-                    if df[col_name].dtype == 'object': 
-                        # value is text
-                        df = df[df[col_name] == value] # okay to use df[col_name] ?
-                    else: 
-                        # value is numeric
-                        df = df[df[col_name] == self._to_number(value)]
-                elif criteria == '>=': 
-                    df = df[df[col_name] >= value] # okay to use df[col_name] ?
-                elif criteria == '<=': 
-                    df = df[df[col_name] <= value] 
-                # store filtered results in tmp file
-                tmp_fn = file.replace('.csv', '.tmp')
-                if not df.empty:
-                    df.to_csv(tmp_fn, index = False)
-                    tmp_files.append(tmp_fn)
-            # print something if no matching record found
-            if not tmp_files:
-                print("No matching record found.")
-        return tmp_files        
+        try:
+            tmp_files = []
+            files = self._get_all_partition_paths(table_name)
+            if files:
+                for file in files:
+                    df = pd.read_csv(file)
+                    # abort if col_name does not exist
+                    if not col_name in df.columns: # okay to use df.columns?
+                        print(f"Error: Column {col_name} does not exist.")
+                        return tmp_files
+                    # get filtered results for each csv file
+                    if criteria == '=': 
+                        if df[col_name].dtype == 'object': 
+                            # value is text
+                            df = df[df[col_name] == value] # okay to use df[col_name] ?
+                        else: 
+                            # value is numeric
+                            df = df[df[col_name] == self._to_number(value)]
+                    elif criteria == '>=': 
+                        df = df[df[col_name] >= value] # okay to use df[col_name] ?
+                    elif criteria == '<=': 
+                        df = df[df[col_name] <= value] 
+                    # store filtered results in tmp file
+                    tmp_fn = file.replace('.csv', '.tmp')
+                    if not df.empty:
+                        df.to_csv(tmp_fn, index = False)
+                        tmp_files.append(tmp_fn)
+                # print something if no matching record found
+                if not tmp_files:
+                    print("No matching record found.")
+            return tmp_files        
+        except KeyError:
+            print(f"Error: Column {col_name} does not exist in table {table_name}.")
+            return []
 
 
     # completed for now (TODO: what if we can not read one row from all file chunks at once)
     # note: only support numeric values
     def ordering(self, table_name, col_name, ascending):
-        files = self._get_all_partition_paths(table_name)
-        if files:
-            # sort all files individually and store in temporary .tmp files
-            sorted_files = self._sort_individual_files(table_name, col_name, ascending)
-            # perform external merge sort on sorted .tmp files
-            merged_files = self._k_way_merge(sorted_files, table_name, col_name, ascending)
-        return merged_files
+        try: 
+            files = self._get_all_partition_paths(table_name)
+            if files:
+                # sort all files individually and store in temporary .tmp files
+                sorted_files = self._sort_individual_files(table_name, col_name, ascending)
+                # perform external merge sort on sorted .tmp files
+                merged_files = self._k_way_merge(sorted_files, table_name, col_name, ascending)
+            return merged_files
+        except KeyError:
+            print(f"Error: Column {col_name} does not exist in table {table_name}.")
+            return []
         
         
     def inner_join(self, table1_name, table2_name, col_name):
@@ -424,39 +436,42 @@ class RelationalDB:
         
     # completed
     def aggregation(self, calculation, col_name, table_name):
-        files = self._get_all_partition_paths(table_name)
-        if files:
-            try:
-                aggregated_value = 0
-                aggregated_count = 0
-                for file in files:
-                    df = pd.read_csv(file)
-                    # abort if col_name does not exist
-                    if not col_name in df.columns: # okay to use df.columns?
-                        print(f"Error: Column {col_name} does not exist in table {table_name}.")
-                        return
-                    # calculate aggregated value
-                    if calculation == 'count':
-                        aggregated_count += len(df[col_name]) # okay to use df[col_name]?
-                    elif calculation == 'sum':
-                        for value in df[col_name]:
-                            aggregated_value += value
+        try:
+            files = self._get_all_partition_paths(table_name)
+            if files:
+                try:
+                    aggregated_value = 0
+                    aggregated_count = 0
+                    for file in files:
+                        df = pd.read_csv(file)
+                        # abort if col_name does not exist
+                        if not col_name in df.columns: # okay to use df.columns?
+                            print(f"Error: Column {col_name} does not exist in table {table_name}.")
+                            return
+                        # calculate aggregated value
+                        if calculation == 'count':
+                            aggregated_count += len(df[col_name]) # okay to use df[col_name]?
+                        elif calculation == 'sum':
+                            for value in df[col_name]:
+                                aggregated_value += value
+                        elif calculation == 'average':
+                            aggregated_count += len(df[col_name]) # okay to use df[col_name]?
+                            for value in df[col_name]:
+                                aggregated_value += value
+                    # print aggregated value
+                    if calculation == 'sum':
+                        print(aggregated_value)
+                    elif calculation == 'count':
+                        print(aggregated_count)
+                    elif calculation == 'average' and aggregated_count == 0:
+                        print(0)
                     elif calculation == 'average':
-                        aggregated_count += len(df[col_name]) # okay to use df[col_name]?
-                        for value in df[col_name]:
-                            aggregated_value += value
-                # print aggregated value
-                if calculation == 'sum':
-                    print(aggregated_value)
-                elif calculation == 'count':
-                    print(aggregated_count)
-                elif calculation == 'average' and aggregated_count == 0:
-                    print(0)
-                elif calculation == 'average':
-                    avg = aggregated_value / aggregated_count
-                    print(f"{avg:.2f}")
-            except Exception:
-                print(f"Error: Column {col_name} in table {table_name} contains non-numeric value.")
+                        avg = aggregated_value / aggregated_count
+                        print(f"{avg:.2f}")
+                except Exception:
+                    print(f"Error: Column {col_name} in table {table_name} contains non-numeric value.")
+        except KeyError:
+            print(f"Error: Column {col_name} does not exist in table {table_name}.")
 
 
     # completed
@@ -542,13 +557,14 @@ class RelationalDB:
         table_name = os.path.splitext(os.path.basename(file_path))[0]
         output_directory = f'rdb/{table_name}'  
         if os.path.exists(output_directory):
-            # clear everything within this directory
-            for file in os.listdir(output_directory):
-                os.remove(file)
+            # clear all matching files
+            pattern = f'rdb/{table_name}/{table_name}_*.csv'
+            files = glob.glob(pattern)
+            for f in files:
+                os.remove(f)
         else:
             # create output directory
             os.makedirs(output_directory)
-        # create chunks
         with open(file_path, 'r') as csv_file:
             reader = csv.reader(csv_file)
             header = next(reader)  

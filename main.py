@@ -41,7 +41,6 @@ class MyCLI(cmd.Cmd):
             tmp_files = glob.glob('rdb/*.tmp')
             for file in tmp_files:
                 os.remove(file)
-            print(e)
 
     def do_exit(self, args):
         print("Goodbye!")

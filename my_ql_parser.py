@@ -83,8 +83,8 @@ class MyQLParser:
     @staticmethod
     # limit not implemented
     def parse_grouping(query):
-        '''group [table_name] by [col1_name] and calculate the [sum / average] of [col2_name]'''
-        match = re.match(r"group (\w+) by (\w+) and calculate the (sum|average) of (\w+)", query)
+        '''group [table_name] by [col1_name] and give me the [sum / average] of [col2_name]'''
+        match = re.match(r"group (\w+) by (\w+) and give me the (sum|average|count) of (\w+)", query)
         if match:
             table_name, col1_name, calculation, col2_name = match.groups()
             return table_name, col1_name, calculation, col2_name
@@ -109,7 +109,7 @@ class MyQLParser:
         match = re.match(r"combine rows from (\w+) and (\w+) where their (\w+) values match(?:, limit (\d+))?", query)
         if match:
             table1_name, table2_name, col_name, limit = match.groups()
-            limit = int(limit) if limit else None  # Convert limit to integer if present
+            limit = int(limit) if limit else None 
             return table1_name, table2_name, col_name, limit
         else:
             raise ValueError("Invalid insert syntax")
