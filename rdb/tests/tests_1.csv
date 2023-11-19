@@ -1,8 +1,8 @@
 show_id,type,title,director,release_year,rating,duration,test_aggr
 s9,TV Show,The Great British Baking Show,Andy Devonshire,2024,TV-14,9 Seasons,9
-s10,Movie,Starling,Theodore Melfi,2021,PG-13,104 min,10
+s10,Movie,The Starling,Theodore Melfi,2021,PG-13,104 min,10
 s11,TV Show,"Vendetta: Truth, Lies and The Mafia",,2022,TV-MA,1 Season,11
-s12,TV Show,Bangkok Breaking,Kongkiat Komesiri,1995,TV-MA,1 Season,12
+s12,TV Show,Bangkok,Kongkiat Komesiri,1995,TV-MA,1 Season,12
 s13,Movie,Je Suis Karl,Christian Schwochow,1994,TV-MA,127 min,13
 s14,Movie,Confessions of an Invisible Girl,Bruno Garotti,2023,TV-PG,91 min,14
 s15,TV Show,Crime Stories: India Detectives,,1930,TV-MA,1 Season,15

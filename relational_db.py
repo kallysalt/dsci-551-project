@@ -82,25 +82,7 @@ class RelationalDB:
                 writer = csv.writer(f)
                 writer.writerow(row_values)
         return file
-        
-        # # check if file size exceeds memory limit
-        
-        # # update records & write back to the file
-        # records.append(row_values)
-        # with open(file_path, mode='w', newline='') as file:
-        #     for record in records:
-        #         file.write(','.join(record) + '\n')
-        # # check if file size exceeds memory limit
-        # if os.path.getsize(file_path) > self.memory_limit:
-        #     # create a new csv file
-        #     table_name = os.path.splitext(os.path.basename(file_path))[0]
-        #     max_index = max([int(file.split('_')[-1].split('.csv')[0]) for file in self._get_all_partition_paths(table_name)])
-        #     max_index += 1
-        #     new_file = f'rdb/{table_name}/{table_name}_{max_index}.csv'
-        #     # set column names
-        #     df = pd.read_csv(file_path)
-        #     df.to_csv(new_file, index = False)
-        #     # delete old file
+
             
     def _aggregate_data(self, df, col1_name, calculation, col2_name):
         aggregation_dict = {}
@@ -156,7 +138,7 @@ class RelationalDB:
         except ValueError:
             raise ValueError(f"Error: Column {col_name} contains non-numeric value.")
 
-    # TODO: what if cannot read all sorted files at once 
+    # TODO: only read from k files at a time
     def _k_way_merge(self, sorted_files, table_name, col_name, ascending):
         # initialize pq, file pointers, csv readers
         pq = []
@@ -230,7 +212,9 @@ class RelationalDB:
         
         elif query.startswith("combine"):
             table1_name, table2_name, col_name = MyQLParser.parse_inner_join(query)
-            self.inner_join(table1_name, table2_name, col_name)
+            tmp_files = self.inner_join(table1_name, table2_name, col_name)
+            self._print_csv_files(tmp_files)
+            self._delete_files(tmp_files)
         
         elif query.startswith("insert"):
             row_value, table_name = MyQLParser.parse_insert(query)
@@ -315,9 +299,39 @@ class RelationalDB:
         
     # TODO
     def inner_join(self, table1_name, table2_name, col_name):
-        # fn = f'rdb/{table_name}_{n}.csv'
-        # not sure how to implement
-        pass 
+        joined_files = []
+        current_file = f"rdb/{table1_name}_joined_with_{table2_name}_0.tmp"
+        header_written = False
+        with open(current_file, 'w', newline = '') as f:
+            writer = csv.writer(f)
+        # Get all partition paths for table 1
+        for file1 in self._get_all_partition_paths(table1_name):
+            df1 = pd.read_csv(file1)
+            # Open table 2 and read line by line
+            for file2 in self._get_all_partition_paths(table2_name):
+                with open(file2, 'r') as f2:
+                    # Create a csv reader object
+                    reader2 = csv.DictReader(f2)
+                    for row in reader2:
+                        # Check if the value in col_name exists in df1
+                        if row[col_name] in df1[col_name].values:
+                            # Get all rows from df1 that match the current value
+                            matching_rows_df1 = df1[df1[col_name] == row[col_name]]
+                            # For each matching row, add the information from the second table's current row
+                            for _, matching_row in matching_rows_df1.iterrows():
+                                combined_row = {**matching_row.to_dict(), **row}
+                                row_values = list(combined_row.values())
+                                # write the header if not written yet
+                                if not header_written:
+                                    with open(current_file, 'w', newline='') as f:
+                                        writer = csv.writer(f)
+                                        writer.writerow(combined_row.keys())  # Writing the header
+                                        header_written = True
+                                # append row
+                                current_file = self._append_row(row_values, current_file)
+                                if current_file not in joined_files:
+                                    joined_files.append(current_file)
+        return joined_files
     
     
     # okay to store aggregation result in json file?
@@ -463,7 +477,7 @@ class RelationalDB:
     # TODO: support delete (drop) entire table?
     
     
-    # TODO: replace is not allowed
+    # okay to use df.loc?
     def update(self, table_name, col_name, new_value, old_value):
         files = self._get_all_partition_paths(table_name)
         if files:
@@ -471,14 +485,15 @@ class RelationalDB:
             for file in files:
                 df = pd.read_csv(file)
                 # abort if col_name does not exist
-                if not col_name in df.columns: # okay to use df.columns?
+                if col_name not in df.columns:  # It is okay to use df.columns
                     print(f"Error: Column {col_name} does not exist in table {table_name}.")
                     return
-                # update matching record(s)
-                if old_value in df[col_name].values: # okay to use df[col_name].values?
+                # check if any row needs to be updated
+                mask = df[col_name] == old_value 
+                if mask.any():  
                     found = True
-                    df[col_name] = df[col_name].replace(old_value, new_value) # TODO
-                    df.to_csv(file, index = False)
+                    df.loc[mask, col_name] = new_value 
+                    df.to_csv(file, index=False)
             if found:
                 print("Update operation completed successfully.")
             else:

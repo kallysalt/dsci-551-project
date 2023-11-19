@@ -32,20 +32,20 @@
 - query "find tests that have a release_year of at most 2020" 
 - query "find tests that have a release_year of at least 2020"
 - query "find tests that release_year is 2020"
-- query "find tests that director is Kirsten Johnson" #FIX
-- query "order tests by release_year in descending order" # FIX PRINT
-- query "order tests by release_year in ascending order" # FIX PRINT
+- query "find tests that director is Kirsten Johnson" 
+- query "order tests by release_year in descending order" 
+- query "order tests by release_year in ascending order"  
 - query "find tests that col_not_exist is 2020"
 - ...  
-- query "calculate the sum of release_year for test"
-- query "calculate the average of release_year for test" 
+- query "calculate the sum of release_year for tests"
+- query "calculate the average of release_year for tests" 
 - query "group tests by show_id and calculate the sum of test_aggr"
 - query "group machine_learning_youtube_videos by Channel and calculate the sum of Likes"
 - query "group machine_learning_youtube_videos by Channel and calculate the average of Likes"
-- query "combine rows from table1_name and table2_name where their col_name values match"   # TODO
+- query "combine rows from tests_left and tests_right_partial where their show_id values match"
 - query "insert s16, TV Show, Dear White People, , 2021, TV-MA, 4 Seasons into tests"
 - query "delete from tests where title = Falsa identidad"
-- query "update tests set title = Starling where title = The Starling"
+- query "update tests set title = Bangkok where title = Bangkok Breaking"
 - query "create table demo (col1_name, col2_name)"
 
 

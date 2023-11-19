@@ -1,0 +1,18 @@
+show_id,type,release_year,rating,duration
+s1,Movie,2020,PG-13,90 min
+s3,TV Show,2021,TV-MA,1 Season
+s4,TV Show,2021,TV-MA,1 Season
+s6,TV Show,2021,TV-MA,1 Season
+s8,Movie,1993,TV-MA,125 min
+s9,TV Show,2021,TV-14,9 Seasons
+s10,Movie,2021,PG-13,104 min
+s12,TV Show,2021,TV-MA,1 Season
+s13,Movie,2021,TV-MA,127 min
+s14,Movie,2021,TV-PG,91 min
+s16,TV Show,2021,TV-MA,4 Seasons
+s17,Movie,2020,TV-MA,67 min
+s19,Movie,2021,TV-14,94 min
+s20,TV Show,2021,TV-MA,1 Season
+s21,TV Show,2021,TV-14,1 Season
+s22,TV Show,2018,TV-14,5 Seasons
+s23,Movie,1996,TV-PG,161 min
