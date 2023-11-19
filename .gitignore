@@ -2,8 +2,9 @@ env/
 **/__pycache__/
 myNoSQL/data/
 
-.DS_Store
-
 # bulk data
 cards.json
 rulings.json
+__pycache__/
+.DS_Store
+archive/
