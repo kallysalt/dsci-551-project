@@ -30,15 +30,15 @@ class RelationalDB:
         df.isnull().any(axis = 0)
         formatters = {column: lambda x: f'{str(x)[:max_width]:<{max_width}}' for column in df.columns}
         if cnt + len(df) < limit:
+            # print all
             print(df.to_string(index = False, header = header, justify='left', formatters = formatters, na_rep=''))
             cnt += len(df)
-        else: # print till limit
-            rows_to_print = limit - cnt
+        else: 
             # print only up to the `limit`
+            rows_to_print = limit - cnt
             print(df.iloc[:rows_to_print].to_string(index = False, header = header, justify = 'left', formatters = formatters, na_rep = ''))
-            cnt = limit  # Update cnt to the limit, since we've reached it
+            cnt = limit
         return cnt
-        
         
     def _print_csv_files(self, files, limit = 15):
         is_first_file = True
@@ -51,7 +51,6 @@ class RelationalDB:
                 if cnt >= limit:
                     return
         
-            
     def _delete_files(self, files):
         for file in files:
             os.remove(file)
@@ -134,7 +133,6 @@ class RelationalDB:
             raise ValueError(f"Error: Column {col_name} contains non-numeric value.")
 
     # TODO: only read from k files at a time
-    # confirm with TA
     def _k_way_merge(self, sorted_files, table_name, col_name, ascending):
         # initialize pq, file pointers, csv readers
         pq = []
@@ -148,15 +146,14 @@ class RelationalDB:
             unique_id_counter += 1  
         # create _merged_0.tmp file
         current_file = f'rdb/{table_name}/{table_name}_merged_0.tmp'
-        # write column names to _merged_0.tmp file
         col_names = csv_readers[0].fieldnames        
         with open(current_file, 'w', newline = '') as f:
             writer = csv.writer(f)
             writer.writerow(col_names)
         while pq:
-            # pop smallest row from the heap
+            # pop smallest row from the heap and append to _merged_{n}.tmp file 
             _, row, reader = heapq.heappop(pq)
-            # write the row to _merged_{n}.tmp file
+            # write the row to
             new_file = self._append_row(row.values(), current_file)
             if new_file != current_file:
                 merged_files.append(new_file)
