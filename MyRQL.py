@@ -10,12 +10,12 @@ import json
 from MyRQLParser import MyRQLParser
 
 # confirm: 
-# ccsv.reader wont load the entire file into memory
-# okay to use DictReader?
-# okay to use df[col_names]?
-# okay to use use iloc during printing?
-# okay to use df.columns?
-# okay to use DictWriter?
+# csv.reader: a lazy iterator that reads and processes the file line by line
+# okay to use DictReader
+# okay to use df[col_names]
+# okay to use use iloc during printing
+# okay to use df.columns
+# okay to use DictWriter
 # pending
 
 class RelationalDB:
@@ -143,7 +143,7 @@ class RelationalDB:
         except ValueError:
             raise ValueError(f"Error: Column {col_name} contains non-numeric value.")
 
-    # pending: is this okay? can i call it k-way merge?
+    # pending: strict k-way merge
     def _k_way_merge(self, sorted_files, table_name, col_name, ascending):
         # initialize pq, file pointers, csv readers
         pq = []
@@ -326,7 +326,7 @@ class RelationalDB:
             return []
         
         
-    # pending: read table 1 line by line as well?
+    # pending: read table 1 line by line as well
     def inner_join(self, table1_name, table2_name, col_name):
         try:
             # initialize variables
@@ -368,7 +368,7 @@ class RelationalDB:
             return []
     
     
-    # pending: okay to store aggregation result in json file?
+    # pending: not store aggregation result in json file
     def grouping(self, table_name, col1_name, calculation, col2_name):
         # write aggregation result for each group to one json file
         try:
@@ -491,8 +491,7 @@ class RelationalDB:
                 print("Insert operation completed successfully.")
             
             
-    # pending: okay to use masking to match rows?  df = df[df[col_name] != value]
-    # # note: does not delete file if no more rows left
+    # note: does not delete file if no more rows left
     def delete(self, table_name, col_name, value):
         files = self._get_all_partition_paths(table_name)
         if files:
@@ -515,29 +514,8 @@ class RelationalDB:
                 
     
     # support delete (drop) entire table?
-    
-    # pending: okay to use df.loc here?
-    # def update(self, table_name, col_name, new_value, old_value):
-    #     files = self._get_all_partition_paths(table_name)
-    #     if files:
-    #         found = False
-    #         for file in files:
-    #             df = pd.read_csv(file)
-    #             # abort if col_name does not exist
-    #             if col_name not in df.columns:  
-    #                 print(f"Error: Column {col_name} does not exist in table {table_name}.")
-    #                 return
-    #             # check if any row needs to be updated
-    #             mask = df[col_name] == old_value 
-    #             if mask.any():  
-    #                 found = True
-    #                 df.loc[mask, col_name] = new_value 
-    #                 df.to_csv(file, index=False)
-    #         if found:
-    #             print("Update operation completed successfully.")
-    #         else:
-    #             print("No matching record found.")
-                
+
+
     def update(self, table_name, col_name, new_value, old_value):
         found = False
         files = self._get_all_partition_paths(table_name)
