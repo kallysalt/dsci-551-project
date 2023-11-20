@@ -104,7 +104,7 @@ load rdb/netflix_originals.csv
 
 ```
 get Title, Genre, IMDB_Score from netflix_originals (default: limit = 15)
-get Title, Genre, IMDB_Score from netflix_originals, limit 3
+get Title, Genre, IMDBScore from netflix_originals, limit 3
 get Age from netflix_originals (error handling)
 ```
 

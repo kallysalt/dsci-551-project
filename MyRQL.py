@@ -9,9 +9,19 @@ import json
 
 from MyRQLParser import MyRQLParser
 
+# confirm: 
+# ccsv.reader wont load the entire file into memory
+# okay to use DictReader?
+# okay to use df[col_names]?
+# okay to use use iloc during printing?
+# okay to use df.columns?
+# okay to use DictWriter?
+# pending
+
 class RelationalDB:
     def __init__(self):
-        self.memory_limit = 4096 # bytes
+        # assupmtion: max file size is half of memeory size
+        self.max_file_size = 4096 # bytes
         
     # note: sorted by file name
     def _get_all_partition_paths(self, table_name):
@@ -23,7 +33,6 @@ class RelationalDB:
         return files
     
     # note: truncate if data string is too long 
-    # okay to use iloc here?
     def _print_df(self, df, is_first_file, cnt, limit):
         header = True if is_first_file else False
         max_width = 25
@@ -34,7 +43,7 @@ class RelationalDB:
             print(df.to_string(index = False, header = header, justify='left', formatters = formatters, na_rep=''))
             cnt += len(df)
         else: 
-            # print only up to the `limit`
+            # print only up to the limit
             rows_to_print = limit - cnt
             print(df.iloc[:rows_to_print].to_string(index = False, header = header, justify = 'left', formatters = formatters, na_rep = ''))
             cnt = limit
@@ -74,22 +83,25 @@ class RelationalDB:
         row_string = ','.join(str(value) for value in row_values)
         total_bytes = os.path.getsize(file) + len(row_string.encode('utf-8'))
         # check if adding this row would exceed the max file size
-        if total_bytes > self.memory_limit:
+        if total_bytes > self.max_file_size:
             # create a new file
             suffix = file.split('.')[-1]
             prefix = file.split('.')[0]
             index = prefix.split('_')[-1]
             prefix = prefix.split(index)[0]
             new_file = f'{prefix}{int(index) + 1}.{suffix}'
-            with open(file, 'r') as f:
+            # get header from prev file
+            with open(file, 'r') as f: 
                 reader = csv.reader(f)
                 header = next(reader)  
+            # write header and row to new file
             with open(new_file, 'a', newline = '') as f:
                 writer = csv.writer(f)
                 writer.writerow(header)
                 writer.writerow(row_values)
             file = new_file
         else:
+            # append row to current file
             with open(file, 'a', newline = '') as f:
                 writer = csv.writer(f)
                 writer.writerow(row_values)
@@ -103,6 +115,7 @@ class RelationalDB:
                    (data_list[j][col_name] < data_list[j+1][col_name] and not ascending):
                     data_list[j], data_list[j+1] = data_list[j+1], data_list[j]
     
+    # pending: save memory
     def _sort_individual_files(self, table_name, col_name, ascending):
         files = self._get_all_partition_paths(table_name)
         sorted_files = []
@@ -111,9 +124,7 @@ class RelationalDB:
             data_list = df.to_dict('records')
             # sort the list using bubble sort
             self._bubble_sort(data_list, col_name, ascending)
-            # convert the sorted list of dictionaries back to a DataFrame
             df_sorted = pd.DataFrame(data_list)
-            # saving the sorted DataFrame with a .tmp extension
             tmp_file = file.replace('.csv', '.tmp')
             df_sorted.to_csv(tmp_file, index = False)
             sorted_files.append(tmp_file)
@@ -132,15 +143,15 @@ class RelationalDB:
         except ValueError:
             raise ValueError(f"Error: Column {col_name} contains non-numeric value.")
 
-    # TODO: only read from k files at a time
+    # pending: is this okay? can i call it k-way merge?
     def _k_way_merge(self, sorted_files, table_name, col_name, ascending):
         # initialize pq, file pointers, csv readers
         pq = []
         unique_id_counter = 0
         file_pointers = [open(file, 'r') for file in sorted_files]
-        csv_readers = [csv.DictReader(fp) for fp in file_pointers] # okay to use DictReader?
+        csv_readers = [csv.DictReader(fp) for fp in file_pointers] 
         merged_files = []
-        # populate pq with the first row from each file
+        # push first row from each file into pq
         for reader in csv_readers:
             self._insert_into_pq(pq, reader, unique_id_counter, col_name, ascending)
             unique_id_counter += 1  
@@ -155,14 +166,15 @@ class RelationalDB:
             _, row, reader = heapq.heappop(pq)
             new_file = self._append_row(row.values(), current_file)
             if new_file != current_file:
+                # a new file was created
                 merged_files.append(new_file)
                 current_file = new_file
+            # push the next row from the same file into pq
             self._insert_into_pq(pq, reader, unique_id_counter, col_name, ascending)
             unique_id_counter += 1  
-        # close file pointers and delete tmp files
+        # close file pointers
         for fp in file_pointers:
             fp.close()
-        self._delete_files(sorted_files)
         return merged_files
     
     
@@ -245,16 +257,14 @@ class RelationalDB:
             raise ValueError("Unrecognized command")
     
     
-    # okay to use df[col_names]?
     def projection(self, col_names, table_name):
         try:
             tmp_files = []
             files = self._get_all_partition_paths(table_name)
             if files:
                 for file in files:
-                    df = pd.read_csv(file)  # read the entire CSV file
-                    df = df[col_names]  # select only the desired columns
-                    # save result to tmp file
+                    df = pd.read_csv(file)  
+                    df = df[col_names]  
                     tmp_fn = file.replace('.csv', '.tmp')
                     df.to_csv(tmp_fn, index = False)
                     tmp_files.append(tmp_fn)
@@ -301,7 +311,6 @@ class RelationalDB:
             return []
 
 
-    # completed for now (TODO: what if we can not read one row from all file chunks at once)
     # note: only support numeric values
     def ordering(self, table_name, col_name, ascending):
         try: 
@@ -317,6 +326,7 @@ class RelationalDB:
             return []
         
         
+    # pending: read table 1 line by line as well?
     def inner_join(self, table1_name, table2_name, col_name):
         try:
             # initialize variables
@@ -358,7 +368,7 @@ class RelationalDB:
             return []
     
     
-    # okay to store aggregation result in json file?
+    # pending: okay to store aggregation result in json file?
     def grouping(self, table_name, col1_name, calculation, col2_name):
         # write aggregation result for each group to one json file
         try:
@@ -438,17 +448,17 @@ class RelationalDB:
                     for file in files:
                         df = pd.read_csv(file)
                         # abort if col_name does not exist
-                        if not col_name in df.columns: # okay to use df.columns?
+                        if not col_name in df.columns: 
                             print(f"Error: Column {col_name} does not exist in table {table_name}.")
                             return
                         # calculate aggregated value
                         if calculation == 'count':
-                            aggregated_count += len(df[col_name]) # okay to use df[col_name]?
+                            aggregated_count += len(df[col_name]) 
                         elif calculation == 'sum':
                             for value in df[col_name]:
                                 aggregated_value += value
                         elif calculation == 'average':
-                            aggregated_count += len(df[col_name]) # okay to use df[col_name]?
+                            aggregated_count += len(df[col_name]) 
                             for value in df[col_name]:
                                 aggregated_value += value
                     # print aggregated value
@@ -481,7 +491,8 @@ class RelationalDB:
                 print("Insert operation completed successfully.")
             
             
-    # note: does not delete file if no more rows left
+    # pending: okay to use masking to match rows?  df = df[df[col_name] != value]
+    # # note: does not delete file if no more rows left
     def delete(self, table_name, col_name, value):
         files = self._get_all_partition_paths(table_name)
         if files:
@@ -489,13 +500,13 @@ class RelationalDB:
             for file in files:
                 df = pd.read_csv(file)
                 # abort if col_name does not exist
-                if not col_name in df.columns:# okay to use df.columns?
+                if not col_name in df.columns:
                     print(f"Error: Column {col_name} does not exist in table {table_name}.")
                     return
                 # delete matching record(s)
                 if value in df[col_name].values:
                     found = True
-                    df = df[df[col_name] != value] # okay to use df[col_name]?
+                    df = df[df[col_name] != value]
                     df.to_csv(file, index = False)
             if found:
                 print("Delete operation completed successfully.")
@@ -505,28 +516,55 @@ class RelationalDB:
     
     # support delete (drop) entire table?
     
-
-    # okay to use df.loc here?
+    # pending: okay to use df.loc here?
+    # def update(self, table_name, col_name, new_value, old_value):
+    #     files = self._get_all_partition_paths(table_name)
+    #     if files:
+    #         found = False
+    #         for file in files:
+    #             df = pd.read_csv(file)
+    #             # abort if col_name does not exist
+    #             if col_name not in df.columns:  
+    #                 print(f"Error: Column {col_name} does not exist in table {table_name}.")
+    #                 return
+    #             # check if any row needs to be updated
+    #             mask = df[col_name] == old_value 
+    #             if mask.any():  
+    #                 found = True
+    #                 df.loc[mask, col_name] = new_value 
+    #                 df.to_csv(file, index=False)
+    #         if found:
+    #             print("Update operation completed successfully.")
+    #         else:
+    #             print("No matching record found.")
+                
     def update(self, table_name, col_name, new_value, old_value):
+        found = False
         files = self._get_all_partition_paths(table_name)
-        if files:
-            found = False
-            for file in files:
-                df = pd.read_csv(file)
-                # abort if col_name does not exist
-                if col_name not in df.columns:  # It is okay to use df.columns
+        if not files:
+            print(f"No files found for table {table_name}.")
+            return
+        for file in files:
+            updated_rows = []
+            with open(file, 'r', newline='') as csvfile:
+                reader = csv.DictReader(csvfile)
+                if col_name not in reader.fieldnames:
                     print(f"Error: Column {col_name} does not exist in table {table_name}.")
                     return
-                # check if any row needs to be updated
-                mask = df[col_name] == old_value 
-                if mask.any():  
-                    found = True
-                    df.loc[mask, col_name] = new_value 
-                    df.to_csv(file, index=False)
-            if found:
-                print("Update operation completed successfully.")
-            else:
-                print("No matching record found.")
+                for row in reader:
+                    if row[col_name] == old_value:
+                        row[col_name] = new_value
+                        found = True
+                    updated_rows.append(row)
+            # write the updated data back to the file
+            with open(file, 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames = reader.fieldnames)
+                writer.writeheader()
+                writer.writerows(updated_rows)
+        if found:
+            print("Update operation completed successfully.")
+        else:
+            print("No matching record found.")
 
 
     def create(self, table_name, col_names):
@@ -547,7 +585,7 @@ class RelationalDB:
         table_name = os.path.splitext(os.path.basename(file_path))[0]
         output_directory = f'rdb/{table_name}'  
         if os.path.exists(output_directory):
-            # clear all matching files
+            # clear all files in output directory
             pattern = f'rdb/{table_name}/{table_name}_*.csv'
             files = glob.glob(pattern)
             for f in files:
@@ -567,7 +605,7 @@ class RelationalDB:
             for row in reader:
                 row_size = len(','.join(row)) + len(os.linesep)
                 # create a new file if adding this row would exceed the max file size
-                if current_file_size + row_size > self.memory_limit:
+                if current_file_size + row_size > self.max_file_size:
                     output_file.close() 
                     current_file_index += 1
                     current_file_name = os.path.join(output_directory, f'{table_name}_{current_file_index}.csv')

@@ -13,6 +13,12 @@ class MyCLI(cmd.Cmd):
     def __init__(self):
         super().__init__()
         self.current_db = None
+        
+    def _delete_tmp_files(self):
+        pattern = f'rdb/*/*.tmp'
+        files = glob.glob(pattern)
+        for file in files:
+            os.remove(file)
 
     def preloop(self):
         self.select_database()
