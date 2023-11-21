@@ -71,6 +71,12 @@ Get cards; filter id = d778cdec-8fc7-4174-bae1-4c8e8ccdfab3
 
 ## Relation DB
 
+#### Load Data
+
+```
+load rdb/netflix_originals.csv
+```
+
 #### Insert
 
 ```
@@ -94,17 +100,11 @@ update netflix_originals set Title = Bright Forces where Title = Dark Forces
 create table demo (col1_name, col2_name)
 ```
 
-#### Load Data
-
-```
-load rdb/netflix_originals.csv
-```
-
 #### Projection
 
 ```
 get Title, Genre, IMDB_Score from netflix_originals (default: limit = 15)
-get Title, Genre, IMDBScore from netflix_originals, limit 3
+get Title, Genre, IMDB_Score from netflix_originals, limit 3
 get Age from netflix_originals (error handling)
 ```
 
