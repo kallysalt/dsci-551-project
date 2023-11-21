@@ -9,14 +9,9 @@ import json
 
 from MyRQLParser import MyRQLParser
 
-# confirm: 
 # csv.reader: a lazy iterator that reads and processes the file line by line
-# okay to use DictReader
-# okay to use df[col_names]
-# okay to use use iloc during printing
-# okay to use df.columns
-# okay to use DictWriter
-# pending
+# csv.DictReader & csv.DictWriter: read from and write to CSV files using dictionaries
+# select col(s): df[col_names]
 
 class RelationalDB:
     def __init__(self):
@@ -115,18 +110,15 @@ class RelationalDB:
                    (data_list[j][col_name] < data_list[j+1][col_name] and not ascending):
                     data_list[j], data_list[j+1] = data_list[j+1], data_list[j]
     
-    # pending: save memory
     def _sort_individual_files(self, table_name, col_name, ascending):
         files = self._get_all_partition_paths(table_name)
         sorted_files = []
         for file in files:
-            df = pd.read_csv(file)
-            data_list = df.to_dict('records')
+            data_list = pd.read_csv(file).to_dict('records')
             # sort the list using bubble sort
             self._bubble_sort(data_list, col_name, ascending)
-            df_sorted = pd.DataFrame(data_list)
             tmp_file = file.replace('.csv', '.tmp')
-            df_sorted.to_csv(tmp_file, index = False)
+            pd.DataFrame(data_list).to_csv(tmp_file, index = False)
             sorted_files.append(tmp_file)
         return sorted_files
     
@@ -143,15 +135,13 @@ class RelationalDB:
         except ValueError:
             raise ValueError(f"Error: Column {col_name} contains non-numeric value.")
 
-    # pending: strict k-way merge
     def _k_way_merge(self, sorted_files, table_name, col_name, ascending):
-        # initialize pq, file pointers, csv readers
-        pq = []
-        unique_id_counter = 0
+        merged_files = []
         file_pointers = [open(file, 'r') for file in sorted_files]
         csv_readers = [csv.DictReader(fp) for fp in file_pointers] 
-        merged_files = []
         # push first row from each file into pq
+        pq = []
+        unique_id_counter = 0
         for reader in csv_readers:
             self._insert_into_pq(pq, reader, unique_id_counter, col_name, ascending)
             unique_id_counter += 1  
@@ -289,12 +279,12 @@ class RelationalDB:
                     if criteria == '=': 
                         if df[col_name].dtype == 'object': 
                             # value is text
-                            df = df[df[col_name] == value] # okay to use df[col_name] ?
+                            df = df[df[col_name] == value] 
                         else: 
                             # value is numeric
                             df = df[df[col_name] == self._to_number(value)]
                     elif criteria == '>=': 
-                        df = df[df[col_name] >= value] # okay to use df[col_name] ?
+                        df = df[df[col_name] >= value]
                     elif criteria == '<=': 
                         df = df[df[col_name] <= value] 
                     # store filtered results in tmp file
@@ -326,7 +316,6 @@ class RelationalDB:
             return []
         
         
-    # pending: read table 1 line by line as well
     def inner_join(self, table1_name, table2_name, col_name):
         try:
             # initialize variables
@@ -367,7 +356,7 @@ class RelationalDB:
             print(f"Error: Column {col_name} does not exist in both tables.")
             return []
     
-    
+
     # pending: not store aggregation result in json file
     def grouping(self, table_name, col1_name, calculation, col2_name):
         # write aggregation result for each group to one json file
@@ -482,7 +471,7 @@ class RelationalDB:
         if files:
             # check if record length is valid
             first_file_df = pd.read_csv(files[0])
-            if len(row_values) != len(first_file_df.columns): # okay to use df.columns?
+            if len(row_values) != len(first_file_df.columns): 
                 print("Error: Invalid record length.")
             else:
                 # find the "last" csv file
@@ -558,7 +547,7 @@ class RelationalDB:
             print(f"Table {table_name} created.")
             
     
-    # split a csv file into chunks within memory limit
+    # split a large csv file into smaller chunks
     def load_large_csv_file(self, file_path):
         table_name = os.path.splitext(os.path.basename(file_path))[0]
         output_directory = f'rdb/{table_name}'  
@@ -580,10 +569,10 @@ class RelationalDB:
             output_file = open(current_file_name, 'w', newline = '')
             writer = csv.writer(output_file)
             writer.writerow(header) 
-            for row in reader:
-                row_size = len(','.join(row)) + len(os.linesep)
-                # create a new file if adding this row would exceed the max file size
-                if current_file_size + row_size > self.max_file_size:
+            for record in reader:
+                record_size = len(','.join(record)) + len(os.linesep)
+                # create a new file if adding this record would exceed the max file size
+                if current_file_size + record_size > self.max_file_size:
                     output_file.close() 
                     current_file_index += 1
                     current_file_name = os.path.join(output_directory, f'{table_name}_{current_file_index}.csv')
@@ -591,6 +580,6 @@ class RelationalDB:
                     writer = csv.writer(output_file)
                     writer.writerow(header)  
                     current_file_size = 0
-                # write the row to the new file
-                writer.writerow(row)
-                current_file_size += row_size
+                # write the record to the new file
+                writer.writerow(record)
+                current_file_size += record_size
