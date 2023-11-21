@@ -222,6 +222,8 @@ class RelationalDB:
             else:
                 self._print_csv_files(tmp_files)
             self._delete_files(tmp_files)
+            for file in glob.glob(f'rdb/*.tmp'):
+                os.remove(file)
         
         elif query.startswith("insert"):
             row_value, table_name = MyRQLParser.parse_insert(query)
@@ -354,6 +356,7 @@ class RelationalDB:
             return joined_files
         except KeyError:
             print(f"Error: Column {col_name} does not exist in both tables.")
+            json_files = glob.glob(f'rdb/*.json')
             return []
     
 
@@ -500,9 +503,6 @@ class RelationalDB:
                 print("Delete operation completed successfully.")
             else:
                 print("No matching record found.")
-                
-    
-    # support delete (drop) entire table?
 
 
     def update(self, table_name, col_name, new_value, old_value):

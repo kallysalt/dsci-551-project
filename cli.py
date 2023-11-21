@@ -52,10 +52,12 @@ class MyCLI(cmd.Cmd):
                 self.current_db.query(args)
             else:
                 print("Please select a database first.")
-        except ValueError as e:
+        except Exception as e:
             # delete all tmp files
-            tmp_files = glob.glob('rdb/*.tmp')
-            for file in tmp_files:
+            for file in glob.glob('rdb/*.tmp'):
+                os.remove(file)
+            # delete all json files
+            for file in glob.glob('rdb/*.json'):
                 os.remove(file)
 
     def do_exit(self, args):
