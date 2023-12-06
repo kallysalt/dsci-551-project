@@ -38,7 +38,7 @@ class MyJSONQLParser:
 
     def _parse_query(self, query_str):
         """Parse a query string into a dictionary with improved handling of AND/OR."""
-        # 使用正则表达式分割 ' and ' 和 ' or '，同时保留分隔符
+        # use re expression to split ' and ' & ' or ', while remains the splitting character
         conditions = re.split(r'(\s+and\s+|\s+or\s+)', query_str)
 
         parsed_conditions = []
@@ -57,14 +57,14 @@ class MyJSONQLParser:
             else:
                 current_and_conditions.append(self._parse_condition(condition.strip()))
 
-        # 添加最后一组 AND 条件
+        # add the last group of AND condition
         if current_and_conditions:
             if len(current_and_conditions) == 1:
                 parsed_conditions.append(current_and_conditions[0])
             else:
                 parsed_conditions.append({'$and': current_and_conditions})
 
-        # 如果只有一个条件，则无需使用 OR
+        # if there's only one group of condition, then there's no need to add OR
         if len(parsed_conditions) == 1:
             return parsed_conditions[0]
         else:
