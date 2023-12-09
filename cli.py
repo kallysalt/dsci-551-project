@@ -1,7 +1,7 @@
 import cmd
 import glob
 import os
-from MyRQL import RelationalDB
+from MyRDB import MyRDB
 
 from myNoSQL.MyJSONQLParser import MyJSONQLParser
 from myNoSQL.MyNoSQL import MyNoSQL
@@ -27,7 +27,7 @@ class MyCLI(cmd.Cmd):
         self.db_type = input("Which database would you like to use? (relational/json): ").lower()
         if self.db_type == 'relational':
             self.prompt = '(relational) '
-            self.db = RelationalDB()
+            self.db = MyRDB()
         elif self.db_type == 'json':
             self.prompt = '(json) '
             self.db = MyNoSQL()
@@ -74,4 +74,5 @@ class MyCLI(cmd.Cmd):
 
 if __name__ == '__main__':
     cli = MyCLI()
+    import pdb; pdb.set_trace()
     cli.cmdloop()

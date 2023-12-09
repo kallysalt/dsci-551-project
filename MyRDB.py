@@ -1,19 +1,18 @@
 import csv
 import pandas as pd
-import sys
 import os
 import glob
 import json
 import heapq
 import json
 
-from MyRQLParser import MyRQLParser
+from MyRDBParser import MyRDBParser
 
 # csv.reader: a lazy iterator that reads and processes the file line by line
 # csv.DictReader & csv.DictWriter: read from and write to CSV files using dictionaries
 # select col(s): df[col_names]
 
-class RelationalDB:
+class MyRDB:
     def __init__(self):
         # assupmtion: max file size is half of memeory size
         self.max_file_size = 4096 # bytes
@@ -179,7 +178,7 @@ class RelationalDB:
         
     def parse_query(self, query):
         if query.startswith("get"):
-            col_names, table_name, limit = MyRQLParser.parse_projection(query)
+            col_names, table_name, limit = MyRDBParser.parse_projection(query)
             tmp_files = self.projection(col_names, table_name)
             if limit:
                 self._print_csv_files(tmp_files, limit)
@@ -188,7 +187,7 @@ class RelationalDB:
             self._delete_files(tmp_files)
             
         elif query.startswith("find"):
-            col_name, table_name, value, criteria, limit = MyRQLParser.parse_filtering(query)
+            col_name, table_name, value, criteria, limit = MyRDBParser.parse_filtering(query)
             tmp_files = self.filtering(col_name, table_name, value, criteria)
             if limit:
                 self._print_csv_files(tmp_files, limit)
@@ -197,7 +196,7 @@ class RelationalDB:
             self._delete_files(tmp_files)
             
         elif query.startswith("order"):
-            table_name, col_name, ascending, limit = MyRQLParser.parse_ordering(query)
+            table_name, col_name, ascending, limit = MyRDBParser.parse_ordering(query)
             tmp_files = self.ordering(table_name, col_name, ascending)
             if limit:
                 self._print_csv_files(tmp_files, limit)
@@ -207,15 +206,15 @@ class RelationalDB:
 
         # limit not implemented
         elif query.startswith("group"):
-            table_name, col1_name, calculation, col2_name = MyRQLParser.parse_grouping(query)
+            table_name, col1_name, calculation, col2_name = MyRDBParser.parse_grouping(query)
             self.grouping(table_name, col1_name, calculation, col2_name)
             
         elif query.startswith("give me"):
-            calculation, col_name, table_name = MyRQLParser.parse_aggregation(query)
+            calculation, col_name, table_name = MyRDBParser.parse_aggregation(query)
             self.aggregation(calculation, col_name, table_name)
         
         elif query.startswith("combine"):
-            table1_name, table2_name, col_name, limit = MyRQLParser.parse_inner_join(query)
+            table1_name, table2_name, col_name, limit = MyRDBParser.parse_inner_join(query)
             tmp_files = self.inner_join(table1_name, table2_name, col_name)
             if limit:
                 self._print_csv_files(tmp_files, limit)
@@ -226,23 +225,23 @@ class RelationalDB:
                 os.remove(file)
         
         elif query.startswith("insert"):
-            row_value, table_name = MyRQLParser.parse_insert(query)
+            row_value, table_name = MyRDBParser.parse_insert(query)
             self.insert(row_value, table_name)
         
         elif query.startswith("delete"):
-            table_name, col_name, value = MyRQLParser.parse_delete(query)
+            table_name, col_name, value = MyRDBParser.parse_delete(query)
             self.delete(table_name, col_name, value)
         
         elif query.startswith("update"):
-            table_name, col_name, new_val, old_val = MyRQLParser.parse_update(query)
+            table_name, col_name, new_val, old_val = MyRDBParser.parse_update(query)
             self.update(table_name, col_name, new_val, old_val)
             
         elif query.startswith("create"):
-            table_name, col_names = MyRQLParser.parse_create(query)
+            table_name, col_names = MyRDBParser.parse_create(query)
             self.create(table_name, col_names)
             
         elif query.startswith("load"):
-            file_path = MyRQLParser.parse_load(query)
+            file_path = MyRDBParser.parse_load(query)
             self.load_large_csv_file(file_path)
         
         else:

@@ -114,7 +114,7 @@ get Age from netflix_originals (error handling)
 find netflix_originals that have a IMDB_Score of at most 3 (default: limit = 15)
 find netflix_originals that have a IMDB_Score of at most 5, limit 3 
 find netflix_originals that have a IMDB_Score of at least 6
-find netflix_originals that have a IMDB_Score of at least 6, limit 3
+find netflix_originals that have a IMDB_Score of at least 6, limi`t 3
 find netflix_originals that Language is Japanese
 find netflix_originals that Language is Japanese, limit 3
 find netflix_originals that Runtime is 120 

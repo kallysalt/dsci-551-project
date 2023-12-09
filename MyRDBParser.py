@@ -1,6 +1,6 @@
 import re
 
-class MyRQLParser:
+class MyRDBParser:
     def __init__(self):
         raise NotImplementedError("StaticClass cannot be instantiated")
     
@@ -40,7 +40,7 @@ class MyRQLParser:
             if match:
                 table_name, col_name, value, limit = match.groups()
                 # only valid for numeric values
-                value = MyRQLParser._to_number(value)
+                value = MyRDBParser._to_number(value)
                 limit = int(limit) if limit else None
                 return col_name, table_name, value, ">=", limit
             else:
@@ -50,7 +50,7 @@ class MyRQLParser:
             if match:
                 table_name, col_name, value, limit = match.groups()
                 # only valid for numeric values
-                value = MyRQLParser._to_number(value)
+                value = MyRDBParser._to_number(value)
                 limit = int(limit) if limit else None
                 return col_name, table_name, value, "<=", limit
             else:

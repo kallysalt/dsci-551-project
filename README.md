@@ -37,7 +37,25 @@ cli.py
 
 #### 1.3 Relation DB
 
+```
+/
+│
+├── MyRDB.py
+├── MyRDBParser.py
+│
+├── rdb
+│   ├── netflix_originals.csv
+│   └── netflix_videos.csv
+│
+```
 
+`netflix_originals.csv` and `netflix_videos` are two real world datasets.
+
+`rdb` is a database file directory, including temporary files and stored chunks data for our relational database.
+
+`MyRDB.py` is the main DB file, responsible for handling internal database operations.
+
+`MyRDBParser.py` is responsible for parsing Query statements.
 
 
 
