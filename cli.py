@@ -74,5 +74,4 @@ class MyCLI(cmd.Cmd):
 
 if __name__ == '__main__':
     cli = MyCLI()
-    import pdb; pdb.set_trace()
     cli.cmdloop()
