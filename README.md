@@ -43,10 +43,9 @@ cli.py
 ├── MyRDB.py
 ├── MyRDBParser.py
 │
-├── rdb
-│   ├── netflix_originals.csv
-│   └── netflix_videos.csv
-│
+└── rdb
+    ├── netflix_originals.csv
+    └── netflix_videos.csv
 ```
 
 `netflix_originals.csv` and `netflix_videos` are two real world datasets.
